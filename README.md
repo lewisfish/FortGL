@@ -2,9 +2,7 @@
 
 3D software rendering in pure Fortran.
 
-
-
-![alt text](https://raw.githubusercontent.com/lewisfish/FortGL/master/head.png "Wireframe head")
+![alt text](https://raw.githubusercontent.com/lewisfish/FortGL/master/output.png "Wireframe head")
 
 ## Features so far...
    * Reads .obj fileformat
