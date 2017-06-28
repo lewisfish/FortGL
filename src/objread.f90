@@ -25,8 +25,9 @@ Module obj_reader
             type(ivec),   allocatable :: farray(:)
             integer :: u, io, verts, faces
             character(len=256) :: line
-
+            print*,filename
             open(newunit=u,file=filename,iostat=io)
+            if(io /= 0)stop "file not found"
             verts = 0
             faces = 0
             do

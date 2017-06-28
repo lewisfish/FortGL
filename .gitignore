@@ -1,3 +1,8 @@
 *.obj
 *.mod
 a.out
+*.ppm
+res/
+data/
+bin/
+build/

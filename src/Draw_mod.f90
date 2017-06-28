@@ -44,6 +44,19 @@ Module Draw
       module procedure swap_point
    end interface
 
+   interface operator(-)
+      module procedure pointSub
+   end interface
+
+   interface operator(+)
+      module procedure pointAdd
+   end interface
+
+   interface operator(*)
+      module procedure pointmultscal
+   end interface
+   
+
    private
    public :: flood_fill, draw_line, draw_circle, draw_rectangle, point, draw_triangle
 
@@ -564,7 +577,7 @@ Contains
 
    end subroutine draw_circleRGBA
    
-   subroutine draw_triangleRGBA(img, tri, colour, fill)
+   subroutine draw_triangleRGBA(img, p1,p2,p3, colour)
 
       use triangleclass
 
@@ -572,22 +585,52 @@ Contains
 
       type(RGBAimage), intent(INOUT) :: img
       type(RGBA), intent(IN) :: colour
-      type(triangle), intent(IN) :: tri
-      logical, optional, intent(IN) :: fill
+      ! type(triangle), intent(IN) :: tri
+      type(point) :: p1,p2,p3
 
-      type(point) :: p1, p2, p3
 
-      p1 = point(tri%p1%x, tri%p1%y)
-      p2 = point(tri%p2%x, tri%p2%y)
-      p3 = point(tri%p3%x, tri%p3%y)
+      type(point) :: a,b
+      integer :: totalheight, i, seg_height, j
+      real :: alpha, beta
+
+
+      ! p1 = point(tri%p1%x, tri%p1%y)
+      ! p2 = point(tri%p2%x, tri%p2%y)
+      ! p3 = point(tri%p3%x, tri%p3%y)
 
       if(p1%y > p2%y)call swap(p1, p2)
       if(p1%y > p3%y)call swap(p1, p3)
       if(p2%y > p3%y)call swap(p2, p3)
 
-      call draw_line(img, p1, p2, RGBA(0,255,0,255))
-      call draw_line(img, p2, p3, RGBA(0,255,0,255))
-      call draw_line(img, p3, p1, RGBA(255,0,0,255))
+      totalheight = p3%y - p1%y
+
+      do i = p1%y, p2%y
+
+         seg_height = p2%y - p1%y + 1
+         alpha = real(i - p1%y)/totalheight
+         beta = real(i - p1%y)/seg_height
+         a = p1 + (p3-p1)*alpha
+         b = p1 + (p2-p1)*beta
+         if(a%x > b%x)call swap(a, b)
+         do j = a%x, b%x
+            call set_pixel(img, j, i, colour)
+         end do
+      end do
+      do i = p2%y, p3%y
+
+         seg_height = p3%y - p2%y+1
+         alpha = real(i - p1%y)/totalheight
+         beta = real(i - p2%y)/seg_height
+         a = p1 + (p3-p1)*alpha
+         b = p2 + (p3-p2)*beta
+         if(a%x > b%x)call swap(a, b)
+         do j = a%x, b%x
+            call set_pixel(img, j, i, colour)
+         end do
+      end do
+      ! call draw_line(img, p1, p2, RGBA(0,255,0,255))
+      ! call draw_line(img, p2, p3, RGBA(0,255,0,255))
+      ! call draw_line(img, p3, p1, RGBA(255,0,0,255))
 
 
    end subroutine draw_triangleRGBA
@@ -602,7 +645,7 @@ Contains
       type(point),       intent(INOUT) :: p1, p2, p3
       logical, optional, intent(IN)    :: fill
       integer                          :: x, y
-      type(bucket)                     :: buck(3)
+      ! type(bucket)                     :: buck(3)
       
       call draw_line(img, p1, p2, colour)
       call draw_line(img, p2, p3, colour)
@@ -853,5 +896,39 @@ Contains
          co%alpha = clampInt(int((b_tmp + (1. - b_tmp) * a_tmp)*255.), 0, 255)
 
    end function alpha_comp
+
+
+   type(point) function pointSub(a, b)
+
+      implicit none
+
+      type(point), intent(IN) :: a, b
+
+      pointSub = point(a%x - b%x, a%y - b%y)
+
+   end function pointSub
+
+
+   type(point) function pointAdd(a, b)
+
+      implicit none
+
+      type(point), intent(IN) :: a, b
+
+      pointAdd = point(a%x + b%x, a%y + b%y)
+
+   end function pointAdd
+
+
+   type(point) function pointmultscal(a, b)
+
+      implicit none
+
+      type(point), intent(IN) :: a
+      real,        intent(IN) :: b
+
+      pointmultscal = point(a%x * b, a%y * b)
+
+   end function pointmultscal
 
 end module Draw
