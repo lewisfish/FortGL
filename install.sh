@@ -4,6 +4,7 @@
 NUM_CORES=1
 debug=0
 help=0
+path="/home/lewis/programs/OpenFl/"
 
 
 while [[ $# -gt 0 ]];
@@ -28,6 +29,10 @@ case $key in
     Help='1'
     shift #past argument
     ;;
+    -p)
+    path="$path$2"
+    shift
+    ;;
     *)
         # unknown option
     ;;
@@ -49,6 +54,8 @@ set -e
 
 if [ "$debug" = 1 ];then
     make clean && make debug
+elif [ "$NUM_CORES" = 0 ];then
+    make clean && make build
 else
     make clean && make 
 fi
@@ -96,7 +103,7 @@ clear
 cd ../bin
 
 if [ "$NUM_CORES" = "1" ]; then
-    ./fortgl "/home/lewis/programs/OpenFl/res/head.obj"
+    ./fortgl "$path"
 else
   echo
 fi

@@ -58,10 +58,13 @@ Module obj_reader
             type(ivec),   intent(IN)      :: farray(:)
             type(triangle), intent(INOUT) :: tarray(:)
 
+            type(vector) :: tmp(3)
             integer :: i
 
             do i = 1, size(farray)
-                tarray(i) = triangle(rgb(255,0,0), varray(farray(i)%x), varray(farray(i)%y), varray(farray(i)%z), i)
+                tmp(:) = [varray(farray(i)%x), varray(farray(i)%y), varray(farray(i)%z)]
+                tarray(i) = triangle(rgb(255,0,0), tmp)
+                ! tarray(i) = triangle(rgb(255,0,0), varray(farray(i)%x), varray(farray(i)%y), varray(farray(i)%z))
             end do
 
         end subroutine make_triangle

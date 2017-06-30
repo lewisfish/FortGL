@@ -577,95 +577,62 @@ Contains
 
    end subroutine draw_circleRGBA
    
-   subroutine draw_triangleRGBA(img, p1,p2,p3, colour)
+   subroutine draw_triangleRGBA(img, p1, p2, p3, colour)
 
       use triangleclass
 
       implicit none
 
-      type(RGBAimage), intent(INOUT) :: img
-      type(RGBA), intent(IN) :: colour
-      ! type(triangle), intent(IN) :: tri
-      type(point) :: p1,p2,p3
+      type(RGBAimage),      intent(INOUT) :: img
+      type(RGBA), optional, intent(IN)    :: colour
+      type(point),          intent(INOUT) :: p1, p2, p3
 
 
       type(point) :: a,b
-      integer :: totalheight, i, seg_height, j
-      real :: alpha, beta
+      integer     :: totalheight, i, seg_height, j
+      real        :: alpha, beta
 
+      if(present(colour))then
 
-      ! p1 = point(tri%p1%x, tri%p1%y)
-      ! p2 = point(tri%p2%x, tri%p2%y)
-      ! p3 = point(tri%p3%x, tri%p3%y)
+         if(p1%y > p2%y)call swap(p1, p2)
+         if(p1%y > p3%y)call swap(p1, p3)
+         if(p2%y > p3%y)call swap(p2, p3)
 
-      if(p1%y > p2%y)call swap(p1, p2)
-      if(p1%y > p3%y)call swap(p1, p3)
-      if(p2%y > p3%y)call swap(p2, p3)
+         totalheight = p3%y - p1%y
+         if(totalheight == 0)totalheight = 1
 
-      totalheight = p3%y - p1%y
+         do i = p1%y, p2%y
 
-      do i = p1%y, p2%y
-
-         seg_height = p2%y - p1%y + 1
-         alpha = real(i - p1%y)/totalheight
-         beta = real(i - p1%y)/seg_height
-         a = p1 + (p3-p1)*alpha
-         b = p1 + (p2-p1)*beta
-         if(a%x > b%x)call swap(a, b)
-         do j = a%x, b%x
-            call set_pixel(img, j, i, colour)
+            seg_height = p2%y - p1%y + 1
+            alpha = real(i - p1%y)/totalheight
+            beta = real(i - p1%y)/seg_height
+            a = p1 + (p3-p1)*alpha
+            b = p1 + (p2-p1)*beta
+            if(a%x > b%x)call swap(a, b)
+            do j = a%x, b%x
+               call set_pixel(img, j, i, colour)
+            end do
          end do
-      end do
-      do i = p2%y, p3%y
+         do i = p2%y, p3%y
 
-         seg_height = p3%y - p2%y+1
-         alpha = real(i - p1%y)/totalheight
-         beta = real(i - p2%y)/seg_height
-         a = p1 + (p3-p1)*alpha
-         b = p2 + (p3-p2)*beta
-         if(a%x > b%x)call swap(a, b)
-         do j = a%x, b%x
-            call set_pixel(img, j, i, colour)
+            seg_height = p3%y - p2%y+1
+            alpha = real(i - p1%y)/totalheight
+            beta = real(i - p2%y)/seg_height
+            a = p1 + (p3-p1)*alpha
+            b = p2 + (p3-p2)*beta
+            if(a%x > b%x)call swap(a, b)
+            do j = a%x, b%x
+               call set_pixel(img, j, i, colour)
+            end do
          end do
-      end do
-      ! call draw_line(img, p1, p2, RGBA(0,255,0,255))
-      ! call draw_line(img, p2, p3, RGBA(0,255,0,255))
-      ! call draw_line(img, p3, p1, RGBA(255,0,0,255))
-
+      else
+         call draw_line(img, p1, p2, RGBA(255,255,255,255))
+         call draw_line(img, p2, p3, RGBA(255,255,255,255))
+         call draw_line(img, p3, p1, RGBA(255,255,255,255))
+      end if
 
    end subroutine draw_triangleRGBA
 
-
-   subroutine draw_polygon(img, colour, p1, p2, p3, fill)
-   
-      implicit none
-      
-      type(RGBaimage),    intent(INOUT) :: img
-      type(RGBa),         intent(IN)    :: colour
-      type(point),       intent(INOUT) :: p1, p2, p3
-      logical, optional, intent(IN)    :: fill
-      integer                          :: x, y
-      ! type(bucket)                     :: buck(3)
-      
-      call draw_line(img, p1, p2, colour)
-      call draw_line(img, p2, p3, colour)
-      call draw_line(img, p3, p1, colour)
-   
-      ! do x = 1 , 3
-      !    buck(x) = bucket(max(p1%y,p2%y), min(p1%y,p2%y), x, 1, abs(p2%x-p1%x), abs(p2%y-p1%y), 0)
-      ! end do
-
-      if(present(fill))then
-         if(fill)then
-            x = (p1%x + p2%x + p3%x)/3
-            y = (p1%y + p2%y + p3%y)/3
-            print*,x,y
-!            call set_pixel(img, x,y,RGB(255,255,255))
-            call flood_fill(img, x, y, colour, RGBa(img%Red(x, y), img%Green(x, y), img%Blue(x, y),img%alpha(x,y)))
-         end if
-      end if
-   
-   end subroutine draw_polygon
    
    subroutine swap_I(a, b)
    
@@ -694,18 +661,6 @@ Contains
       
    end subroutine swap_point
    
-
-   ! subroutine fill_poly(img, colour)
-
-   !    implicit none
-
-   !    type(RGBAimage), intent(INOUT) :: img
-   !    type(RGBA),      intent(IN)    :: colour
-
-
-
-   ! end subroutine fill_poly
-
 
    recursive subroutine flood_fillRGB(img, x, y, colour, old)
    
@@ -927,7 +882,7 @@ Contains
       type(point), intent(IN) :: a
       real,        intent(IN) :: b
 
-      pointmultscal = point(a%x * b, a%y * b)
+      pointmultscal = point(int(a%x * b), int(a%y * b))
 
    end function pointmultscal
 

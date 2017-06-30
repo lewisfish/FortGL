@@ -4,6 +4,7 @@ program openFl
     use Draw
     use obj_reader
     use triangleclass
+    use types
 
     implicit none
 
@@ -11,37 +12,59 @@ program openFl
     type(triangle), allocatable :: tarray(:)
 
     type(RGBAimage)     :: img
-    type(RGBA)          :: white, red, green
-    type(point)         :: p1, p2, p3
+    type(point)         :: screenCoor(3)
+    type(vector)        :: worldCoor(3), v, n, light_dir
     character(len=256)  :: arg
-    integer             :: i
+    integer             :: i, j, height, width
+    real :: intensity
 
+    !get file name
     call get_command_argument(1, arg)
 
-    white = RGBA(255, 255, 255, 255)
-    red =   RGBA(255, 0,   0,   255)
-    green = RGBA(0,   255, 0,   255)
+    !set file size
+    width = 800
+    height = 800
 
+    light_dir = vector(0.,0.,-1.)
+
+    !setup imgage object
     call init_image(img)
-    call alloc_image(img, 800, 800)
+    call alloc_image(img, width, height)
 
+    !read obj file
     call read_obj(trim(arg), tarray)
 
+    !do render
     do i = 1, size(tarray)
+        do j = 1, 3
+            v = tarray(i)%vert(j)
+            screenCoor(j) = point(int((v%x+1)*width/2.), int((v%y+1)*height/2.))
+            worldCoor(j) = v  
+        end do
 
-        !convert triangle to 2d points
-        p1 = point((tarray(i)%p1%x+1.)*800/2., (tarray(i)%p1%y+1.)*800/2.)
-        p2 = point((tarray(i)%p2%x+1.)*800/2., (tarray(i)%p2%y+1.)*800/2.)
-        p3 = point((tarray(i)%p3%x+1.)*800/2., (tarray(i)%p3%y+1.)*800/2.)
+        n = (worldCoor(3) - worldCoor(1)) .cross. (worldCoor(2) - worldCoor(1))
+        n = normal(n)
 
-        !draw triangle with random colour
-        call draw_triangle(img, p1,p2,p3, RGBA(mod(irand(),255),mod(irand(),255),mod(irand(),255),255))
-
+        intensity = n .dot. light_dir
+        if(intensity > 0)then
+            intensity = intensity*255
+            if(intensity > 255) intensity=255
+            call draw_triangle(img, screenCoor(1), screenCoor(2), screenCoor(3), &
+                               RGBA(int(intensity), int(intensity), int(intensity),255))
+        end if
     end do
+
+    !flip image
     call flip(img)
-    call write_ppm("/home/lewis/programs/OpenFl/data/output.ppm", img, 'P6')
+    !save image
+    call save_image(img, "/home/lewis/programs/OpenFl/data/output", '.png')
 
 end program openFl
+
+!head
+! p1 = point((tarray(i)%p1%x+1.)*800/2., (tarray(i)%p1%y+1.)*800/2.)        
+! p2 = point((tarray(i)%p2%x+1.)*800/2., (tarray(i)%p2%y+1.)*800/2.)        
+! p3 = point((tarray(i)%p3%x+1.)*800/2., (tarray(i)%p3%y+1.)*800/2.)        
 
 !teapot  
 ! p1 = point((tarray(i)%p1%x+100.)*8/2., (tarray(i)%p1%y+60.)*8/2.)

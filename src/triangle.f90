@@ -6,8 +6,7 @@ module triangleclass
     implicit none
 
     type, extends(shape) :: triangle
-        type(vector) :: p1, p2, p3
-        integer      :: obj
+        type(vector) :: vert(3)
 
         contains
         
@@ -22,7 +21,7 @@ module triangleclass
 
         class(triangle), intent(IN) :: this
 
-        print*,'triangle', this%p1, this%p2, this%p3
+        print*,'triangle', this%vert(:)
 
     end subroutine info_fn
 

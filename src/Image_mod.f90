@@ -470,7 +470,7 @@ Contains
          end do
       else
          print*,'Mode not supported!'
-         call exit(0)
+         error stop
 !         do j = 1, img%height
 !            do i = 1, img%width
 !               read(56) img%red(i,j)
@@ -527,7 +527,7 @@ Contains
          end do
       else
          print*,'Mode not supported!'
-         call exit(0)
+         error stop
 !         do j = 1, img%height
 !            do i = 1, img%width
 !               read(56) img%red(i,j)
@@ -676,9 +676,9 @@ Contains
       type(RGBimage), intent(OUT) :: img
       character(*),   intent(IN)  :: filename, format
       
-      call system('convert '//filename//format//' '//filename//'.ppm')
+      call execute_command_line('convert '//filename//format//' '//filename//'.ppm')
       call read_ppm(filename//'.ppm', img)
-      call system('rm '//filename//'.ppm')
+      call execute_command_line('rm '//filename//'.ppm')
    
    end subroutine open_imageRGB
 
@@ -689,9 +689,9 @@ Contains
       type(RGBAimage), intent(OUT) :: img
       character(*),   intent(IN)  :: filename, format
       
-      call system('convert '//filename//format//' '//filename//'.ppm')
+      call execute_command_line('convert '//filename//format//' '//filename//'.ppm')
       call read_ppm(filename//'.ppm', img)
-      call system('rm '//filename//'.ppm')
+      call execute_command_line('rm '//filename//'.ppm')
    
    end subroutine open_imageRGBA
 
@@ -703,11 +703,10 @@ Contains
       type(RGBimage), intent(IN) :: img
       character(*),   intent(IN) :: filename, format
       
-      ! print*,'Saved image as: ',filename//format
-      ! call exit(0)
+      print*,'Saved image as: ',filename//format
       call write_ppm(filename//'.ppm', img, 'P6')
-      call system('convert '//filename//'.ppm '//filename//format)
-      call system('rm '//filename//'.ppm')
+      call execute_command_line('convert '//filename//'.ppm '//filename//format)
+      call execute_command_line('rm '//filename//'.ppm')
    
    end subroutine save_imageRGB
 
@@ -720,10 +719,9 @@ Contains
       character(*),   intent(IN) :: filename, format
       
       print*,filename//format
-      ! call exit(0)
       call write_ppm(filename//'.ppm', img, 'P6')
-      call system('convert '//filename//'.ppm '//filename//format)
-      call system('rm '//filename//'.ppm')
+      call execute_command_line('convert '//filename//'.ppm '//filename//format)
+      call execute_command_line('rm '//filename//'.ppm')
    
    end subroutine save_imageRGBA
 end module image
