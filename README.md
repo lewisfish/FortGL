@@ -7,6 +7,7 @@
 ## Features so far...
    * Reads .obj fileformat
    * Wireframe render of triangles
+   * Gouraud shading
    * output in ppm
 
 
@@ -19,7 +20,7 @@
 
 ## ToDo
   * make more oop style
-  * fill in triangles
+  * implement z-buffer
   * shaders
   * fix .obj for more than order 3 (i.e. more than just triangles)
   * more file formats (both model input and image output formats)
