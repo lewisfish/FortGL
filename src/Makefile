@@ -1,6 +1,7 @@
 FCOMP = gfortran
 FCFLAGS = -O2 -freal-4-real-8
 FCDEBUG = -g -fbacktrace -fcheck=all -fbounds-check -ffpe-trap=invalid,overflow,underflow,denormal
+FCBUILD = -Wall -Wextra -pedantic -std=f2008
 
 PROGRAM =  fortgl
 
@@ -17,6 +18,8 @@ OBJECTS = $(SRCS:.f90=.o)
 all:	$(PROGRAM)
 debug:	FCFLAGS += $(FCDEBUG)
 debug:	$(PROGRAM)
+build:	FCFLAGS += $(FCBUILD)
+build:	$(PROGRAM)
 
 $(PROGRAM):	$(OBJECTS)
 	$(FCOMP) $(FCFLAGS) -o $@ $^ 
