@@ -6,7 +6,7 @@ module triangleclass
     implicit none
 
     type, extends(shape) :: triangle
-        type(vector) :: vert(3)
+        type(vector) :: vert(3), uvs(3)
 
         contains
         

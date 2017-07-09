@@ -607,7 +607,7 @@ Contains
    end function barycentric
 
 
-   subroutine draw_triangleRGBA(img, pts, zbuffer, colour)
+   subroutine draw_triangleRGBA(img, pts, zbuffer, uvs, intensity, colour)
 
       use triangleclass
       use types
@@ -615,14 +615,16 @@ Contains
       implicit none
 
       type(RGBAimage),      intent(INOUT) :: img
+      type(ivec),           intent(INOUT) :: pts(:)
+      type(vector),         intent(IN)    :: uvs(:)
       type(RGBA), optional, intent(IN)    :: colour
-      type(ivec),          intent(INOUT)  :: pts(:)
-      real :: zbuffer(:)
-      type(vector) ::  tmp
-      type(ivec) :: p
-      integer :: bmin(2), bmax(2), clamp(2)
-      real :: bc_screen(3)
-      integer :: j,i,k
+      real,                 intent(INOUT) :: zbuffer(:)
+      real,                 intent(IN)    :: intensity
+
+      type(vector) :: tmp
+      type(ivec)   :: p
+      integer      :: bmin(2), bmax(2), clamp(2), i, j, k
+      real         :: bc_screen(3)
 
       if(present(colour))then
 
@@ -630,6 +632,7 @@ Contains
          bmax = [0, 0]
          clamp = [img%width, img%height]
 
+         !get bounding box for triangle
          do i = 1, 3
                bmin(1) = min(bmin(1), pts(i)%x)
                bmin(2) = min(bmin(2), pts(i)%y)

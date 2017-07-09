@@ -491,7 +491,7 @@ Contains
       implicit none
       
       type(RGBAImage),     intent(OUT) :: img
-      integer                          :: nmax, i, j, offset
+      integer                          :: nmax, i, j, offset, io
       character(len = *), intent(IN)   :: filename
       character(2)                     :: mode
       character                        :: code
@@ -503,42 +503,44 @@ Contains
       nullify(img%Blue)
       nullify(img%Alpha)
       
-      open(56, file = filename, access='stream',form='formatted',status= 'old')
-      
-      read(56, '(A2)') mode
-      read(56, *) img%width, img%height
-      read(56, *) nmax
-      inquire(56,pos=offset)
-      close(56)
-      open(56 ,file=filename,access='stream',status='old')
-      read(56, pos=offset-1) code
-      call alloc_image(img, img%width, img%height)
-
-      if(mode == 'P6')then
-         do j = 1, img%height
-            do i = 1, img%width
-               read(56) code
-               img%Red(i,j) = iachar(code)
-               read(56) code
-               img%Green(i,j) = iachar(code)
-               read(56) code
-               img%Blue(i,j) = iachar(code)
-            end do
-         end do
+      open(56, file = filename, access='stream',form='formatted',status= 'old', iostat=io)
+      if(io /= 0)then
+         print*,'Cant open'//trim(filename)
       else
-         print*,'Mode not supported!'
-         error stop
-!         do j = 1, img%height
-!            do i = 1, img%width
-!               read(56) img%red(i,j)
-!               read(56),img%green(i,j)
-!               read(56),img%blue(i,j)
-!               print*,img%red(i,j),img%green(i,j),img%blue(i,j)
-!               call exit(0)
-!            end do
-!         end do
-      end if
+         read(56, '(A2)') mode
+         read(56, *) img%width, img%height
+         read(56, *) nmax
+         inquire(56,pos=offset)
+         close(56)
+         open(56 ,file=filename,access='stream',status='old')
+         read(56, pos=offset-1) code
+         call alloc_image(img, img%width, img%height)
 
+         if(mode == 'P6')then
+            do j = 1, img%height
+               do i = 1, img%width
+                  read(56) code
+                  img%Red(i,j) = iachar(code)
+                  read(56) code
+                  img%Green(i,j) = iachar(code)
+                  read(56) code
+                  img%Blue(i,j) = iachar(code)
+               end do
+            end do
+         else
+            print*,'Mode not supported!'
+            error stop
+   !         do j = 1, img%height
+   !            do i = 1, img%width
+   !               read(56) img%red(i,j)
+   !               read(56),img%green(i,j)
+   !               read(56),img%blue(i,j)
+   !               print*,img%red(i,j),img%green(i,j),img%blue(i,j)
+   !               call exit(0)
+   !            end do
+   !         end do
+         end if
+      end if
       close(56)
    
    end subroutine read_ppm_RGBA

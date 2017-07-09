@@ -12,7 +12,7 @@ program openFl
     !array of triangles
     type(triangle), allocatable :: tarray(:)
 
-    type(RGBAimage)     :: img, zbuf
+    type(RGBAimage)     :: img, zbuf, texture
     type(RGBA)          :: colour
     type(ivec)          :: screenCoor(3)
     type(vector)        :: worldCoor(3), v, n, light_dir
@@ -34,14 +34,16 @@ program openFl
     !setup imgage object
     call init_image(img)
     call alloc_image(img, width, height)
+
     call init_image(zbuf)
     call alloc_image(zbuf, width, height)
+
     allocate(zbuffer(width*height))
 
     zbuffer = -huge(1.)
 
-    !read obj file
-    call read_obj(trim(arg), tarray)
+    !read obj file and texture
+    call read_obj(trim(arg), tarray, texture)
 
     !do render
     do i = 1, size(tarray)
@@ -55,9 +57,12 @@ program openFl
         n = normal(n)
         intensity = n .dot. light_dir
         if(intensity > 0)then
+            ! do k = 1, 3
+            !     uvs(k) = uv(i, k)
+            ! end do
             intensity = intensity*255
             if(intensity > 255) intensity=255
-            call draw_triangle(img, screenCoor(:), zbuffer(:), RGBA(int(intensity), int(intensity), int(intensity),255))
+            ! call draw_triangle(img, screenCoor(:), zbuffer(:), uvs, intensity)
         end if
     end do
 
