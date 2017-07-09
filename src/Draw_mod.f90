@@ -41,7 +41,7 @@ Module Draw
 
    interface swap
       module procedure swap_I
-      module procedure swap_point
+      module procedure swap_ivec
    end interface
 
    interface operator(-)
@@ -576,62 +576,98 @@ Contains
       end if
 
    end subroutine draw_circleRGBA
-   
-   subroutine draw_triangleRGBA(img, p1, p2, p3, colour)
+
+
+   type(vector) function barycentric(a, b, c, p)
+
+      use types
+
+      implicit none
+
+      type(ivec) :: a, b, c, s(2), u, p
+
+      s(1)%x = c%x - a%x 
+      s(1)%y = b%x - a%x 
+      s(1)%z = a%x - p%x 
+
+      s(2)%x = c%y - a%y 
+      s(2)%y = b%y - a%y 
+      s(2)%z = a%y - p%y
+
+      u = s(1) .cross. s(2)
+
+      if(abs(u%z) < 1)then
+         barycentric = vector(-1.,1.,1.)
+         return
+      else
+         barycentric = vector(1.0-(u%x+u%y)/real(u%z), real(u%y)/real(u%z), real(u%x)/real(u%z))
+      end if
+
+
+   end function barycentric
+
+
+   subroutine draw_triangleRGBA(img, pts, zbuffer, colour)
 
       use triangleclass
+      use types
 
       implicit none
 
       type(RGBAimage),      intent(INOUT) :: img
       type(RGBA), optional, intent(IN)    :: colour
-      type(point),          intent(INOUT) :: p1, p2, p3
-
-
-      type(point) :: a,b
-      integer     :: totalheight, i, seg_height, j
-      real        :: alpha, beta
+      type(ivec),          intent(INOUT)  :: pts(:)
+      real :: zbuffer(:)
+      type(vector) ::  tmp
+      type(ivec) :: p
+      integer :: bmin(2), bmax(2), clamp(2)
+      real :: bc_screen(3)
+      integer :: j,i,k
 
       if(present(colour))then
 
-         if(p1%y > p2%y)call swap(p1, p2)
-         if(p1%y > p3%y)call swap(p1, p3)
-         if(p2%y > p3%y)call swap(p2, p3)
+         bmin = [img%width, img%height]
+         bmax = [0, 0]
+         clamp = [img%width, img%height]
 
-         totalheight = p3%y - p1%y
-         if(totalheight == 0)totalheight = 1
+         do i = 1, 3
+               bmin(1) = min(bmin(1), pts(i)%x)
+               bmin(2) = min(bmin(2), pts(i)%y)
 
-         do i = p1%y, p2%y
-
-            seg_height = p2%y - p1%y + 1
-            alpha = real(i - p1%y)/totalheight
-            beta = real(i - p1%y)/seg_height
-            a = p1 + (p3-p1)*alpha
-            b = p1 + (p2-p1)*beta
-            if(a%x > b%x)call swap(a, b)
-            do j = a%x, b%x
-               call set_pixel(img, j, i, colour)
-            end do
+               bmax(1) = min(clamp(1), max(bmax(1), pts(i)%x))
+               bmax(2) = min(clamp(2), max(bmax(2), pts(i)%y))
          end do
-         do i = p2%y, p3%y
 
-            seg_height = p3%y - p2%y+1
-            alpha = real(i - p1%y)/totalheight
-            beta = real(i - p2%y)/seg_height
-            a = p1 + (p3-p1)*alpha
-            b = p2 + (p3-p2)*beta
-            if(a%x > b%x)call swap(a, b)
-            do j = a%x, b%x
-               call set_pixel(img, j, i, colour)
+         do i = bmin(1), bmax(1)
+            do j = bmin(2), bmax(2)
+               p%x = i
+               p%y = j
+               p%z = 0
+
+               tmp = barycentric(pts(1), pts(2), pts(3), p)
+               bc_screen = [tmp%x, tmp%y, tmp%z]
+
+               if(bc_screen(1) < 0. .or. bc_screen(2) < 0. .or. bc_screen(3) < 0.)cycle
+               do k = 1, 3
+                  p%z = p%z + pts(k)%z*bc_screen(k)
+               end do
+               if(zbuffer(int(p%x+p%y*img%width)) < p%z)then
+                  zbuffer(int(p%x+p%y*img%width)) = p%z
+                  call set_pixel(img, p%x, p%y, colour)
+               end if
             end do
          end do
       else
-         call draw_line(img, p1, p2, RGBA(255,255,255,255))
-         call draw_line(img, p2, p3, RGBA(255,255,255,255))
-         call draw_line(img, p3, p1, RGBA(255,255,255,255))
+         !wireframe render
+         call draw_line(img, point(pts(1)%x, pts(1)%y), point(pts(2)%x, pts(2)%y), RGBA(255,255,255,255))
+         call draw_line(img, point(pts(2)%x, pts(2)%y), point(pts(3)%x, pts(3)%y), RGBA(255,255,255,255))
+         call draw_line(img, point(pts(3)%x, pts(3)%y), point(pts(1)%x, pts(1)%y), RGBA(255,255,255,255))
       end if
-
    end subroutine draw_triangleRGBA
+
+
+  
+
 
    
    subroutine swap_I(a, b)
@@ -648,18 +684,20 @@ Contains
    end subroutine swap_I
 
 
-   subroutine swap_point(a, b)
+   subroutine swap_ivec(a, b)
    
+      use types
+
       implicit none
       
-      type(point), intent(INOUT) :: a, b
-      type(point)                :: tmp
+      type(ivec), intent(INOUT) :: a, b
+      type(ivec)                :: tmp
       
       tmp = a
       a = b
       b = tmp
       
-   end subroutine swap_point
+   end subroutine swap_ivec
    
 
    recursive subroutine flood_fillRGB(img, x, y, colour, old)

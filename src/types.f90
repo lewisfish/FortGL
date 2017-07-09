@@ -9,26 +9,34 @@ module types
         real :: x, y, z
     end type vector
 
+    type :: ivec
+        integer :: x, y, z
+    end type ivec
+
     interface operator (.dot.)
         module procedure vecDot
     end interface
 
     interface operator (.cross.)
         module procedure vecCross
+        module procedure ivecCross
     end interface
 
     interface operator (-)
         module procedure vecSub
+        module procedure ivecSub            
     end interface
 
     interface operator (*)
         module procedure vecMulA
+        module procedure ivecMulA
         module procedure vecMulB
         module procedure colourmultiplyvector
     end interface
 
     interface operator (+)
         module procedure vecAdd
+        module procedure ivecAdd
     end interface
 
     contains
@@ -54,6 +62,17 @@ module types
 
         end function vecMulA
 
+            type(ivec) function ivecMulA(a, b)
+
+            implicit none
+
+            type(ivec), intent(IN) :: a
+            real,         intent(IN) :: b
+
+            ivecMulA = ivec(a%x * b, a%y * b, a%z * b)
+
+        end function ivecMulA
+
 
         type(vector) function vecMulB(a, b)
 
@@ -78,6 +97,17 @@ module types
         end function vecSub
 
 
+            type(ivec) function ivecSub(a, b)
+
+            implicit none
+
+            type(ivec), intent(IN) :: a, b
+
+            ivecSub = ivec(a%x - b%x, a%y - b%y , a%z - b%z)
+
+        end function ivecSub
+
+
         type(vector) function vecAdd(a, b)
 
             implicit none
@@ -87,6 +117,17 @@ module types
             vecAdd = vector(a%x + b%x, a%y + b%y , a%z + b%z)
 
         end function vecAdd
+
+
+        type(ivec) function ivecAdd(a, b)
+
+            implicit none
+
+            type(ivec), intent(IN) :: a, b
+
+            ivecAdd = ivec(a%x + b%x, a%y + b%y , a%z + b%z)
+
+        end function ivecAdd
 
 
         real function vecDot(a, b)
@@ -111,9 +152,29 @@ module types
             j = (a%x * b%z) - (b%x * a%z)
             k = (a%x * b%y) - (b%x * a%y)
 
+            j = -j
+
             vecCross = vector(i, j, k)
 
         end function vecCross
+
+
+        type(ivec) function ivecCross(a, b)
+
+            implicit none
+
+            type(ivec), intent(IN) :: a, b
+            integer                :: i, j, k
+
+            i = (a%y * b%z) - (b%y * a%z)
+            j = (a%x * b%z) - (b%x * a%z)
+            k = (a%x * b%y) - (b%x * a%y)
+
+            j = -j
+
+            ivecCross = ivec(i, j, k)
+
+        end function ivecCross
 
 
         real function magnitude(this)
@@ -134,7 +195,10 @@ module types
             real :: mag
 
             mag = magnitude(this)
-
+            if(mag == 0.)then
+                ! print*,this
+                mag = 1.
+            end if
             normal = vector(this%x/mag, this%y/mag, this%z/mag)
 
         end function normal

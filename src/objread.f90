@@ -5,10 +5,6 @@ Module obj_reader
 
     implicit none
     
-    type :: ivec
-        integer :: x, y, z        
-    end type ivec
-
     public  :: read_obj
     private :: read_vert, read_faces, make_triangle
 
