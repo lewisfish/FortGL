@@ -20,7 +20,6 @@
 
 ## ToDo
   * make more oop style
-  * implement z-buffer
   * shaders
   * fix .obj for more than order 3 (i.e. more than just triangles)
   * more file formats (both model input and image output formats)
