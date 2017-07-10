@@ -4,8 +4,8 @@
 NUM_CORES=1
 debug=0
 help=0
-path="/home/lewis/programs/OpenFl/"
-
+path="$(pwd)"
+path="$path/"
 
 while [[ $# -gt 0 ]];
 do

@@ -91,7 +91,8 @@ program openFl
     !save image
     call save_image(img, trim(pwd)//"data/output", '.png')
 
-    call execute_command_line("eog "//trim(pwd)//"data/output.png")
+    !asynchronously display image if supported
+    call execute_command_line("eog "//trim(pwd)//"data/output.png", wait=.false.)
 
 
     do i =1, width-1
@@ -104,7 +105,7 @@ program openFl
     end do
 
     call flip(zbuf)
-    call save_image(zbuf, "/home/lewis/programs/OpenFl/data/zbuffer", '.png')
+    call save_image(zbuf, trim(pwd)//"data/zbuffer", '.png')
 
 end program openFl
 
