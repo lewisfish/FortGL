@@ -31,6 +31,7 @@ Module obj_reader
             if(io /= 0)stop "file not found"
             verts = 0
             faces = 0
+            texts = 0
             do
                 read(u, '(a)',iostat=io) line
                 if(io /=0)exit  !eof

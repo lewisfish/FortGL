@@ -74,7 +74,7 @@ module types
             type(ivec), intent(IN) :: a
             real,         intent(IN) :: b
 
-            ivecMulA = ivec(a%x * b, a%y * b, a%z * b)
+            ivecMulA = ivec(int(a%x * b), int(a%y * b), int(a%z * b))
 
         end function ivecMulA
 

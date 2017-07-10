@@ -41,7 +41,6 @@ Module Draw
 
    interface swap
       module procedure swap_I
-      module procedure swap_ivec
    end interface
 
    interface operator(-)
@@ -119,6 +118,7 @@ Contains
        end if
     end do    
    end subroutine draw_lineRGB
+
 
    subroutine draw_lineRGBA(img, p1, p2, colour)
    
@@ -574,7 +574,6 @@ Contains
                end if
          end do   
       end if
-
    end subroutine draw_circleRGBA
 
 
@@ -602,8 +601,6 @@ Contains
       else
          barycentric = vector(1.0-(u%x+u%y)/real(u%z), real(u%y)/real(u%z), real(u%x)/real(u%z))
       end if
-
-
    end function barycentric
 
 
@@ -656,7 +653,7 @@ Contains
 
                if(bc_screen(1) < 0. .or. bc_screen(2) < 0. .or. bc_screen(3) < 0.)cycle
                do k = 1, 3
-                  p%z = p%z + pts(k)%z*bc_screen(k)
+                  p%z = p%z + int(pts(k)%z*bc_screen(k))
                end do
 
                if(zbuffer(int(p%x+p%y*img%width)) < p%z)then
@@ -689,10 +686,6 @@ Contains
    end subroutine draw_triangleRGBA
 
 
-  
-
-
-   
    subroutine swap_I(a, b)
    
       implicit none
@@ -705,22 +698,6 @@ Contains
       b = tmp
       
    end subroutine swap_I
-
-
-   subroutine swap_ivec(a, b)
-   
-      use types
-
-      implicit none
-      
-      type(ivec), intent(INOUT) :: a, b
-      type(ivec)                :: tmp
-      
-      tmp = a
-      a = b
-      b = tmp
-      
-   end subroutine swap_ivec
    
 
    recursive subroutine flood_fillRGB(img, x, y, colour, old)
@@ -946,5 +923,4 @@ Contains
       pointmultscal = point(int(a%x * b), int(a%y * b))
 
    end function pointmultscal
-
 end module Draw
