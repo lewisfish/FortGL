@@ -4,7 +4,6 @@ module types
 
     implicit none
 
-
     type :: vector
         real :: x, y, z
     end type vector
@@ -38,6 +37,12 @@ module types
         module procedure vecAdd
         module procedure ivecAdd
     end interface
+
+
+    private
+    public :: vector, ivec
+    public :: operator(.dot.), operator(.cross.), operator(-), operator(*), operator(+)
+    public :: magnitude, normal
 
     contains
         function colourmultiplyvector(b, a)

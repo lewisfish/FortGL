@@ -5,7 +5,8 @@ FCBUILD = -Wall -Wextra -pedantic -std=f2008
 
 PROGRAM =  fortgl
 
-SRCS =		Image_mod.f90 \
+SRCS =		utils.f90 \
+			Image_mod.f90 \
 			types.f90 \
 			shapeclass.f90 \
 			triangle.f90 \

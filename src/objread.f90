@@ -51,8 +51,10 @@ Module obj_reader
             call make_triangle(varray, farray, tarray, textarray)
             deallocate(varray,farray,textarray)
 
-            call open_image(texture, filename(:len(filename)-4)//'_diffuse', '.tga')
-            call flip(texture)
+            if(texts > 0)then
+                call open_image(texture, filename(:len(filename)-4)//'_diffuse', '.tga')
+                call flip(texture)
+            end if
         end subroutine read_obj
 
 
@@ -69,9 +71,10 @@ Module obj_reader
 
             do i = 1, size(farray,1)
                 tmp(:) = [varray(farray(i,1)%x), varray(farray(i,1)%y), varray(farray(i,1)%z)]
-                tmp2(:) = [textarray(farray(i,2)%x), textarray(farray(i,2)%y), textarray(farray(i,2)%z)]
+                if(size(textarray) > 1)then
+                    tmp2(:) = [textarray(farray(i,2)%x), textarray(farray(i,2)%y), textarray(farray(i,2)%z)]
+                end if
                 tarray(i) = triangle(rgb(255,0,0), tmp, tmp2)
-                ! tarray(i) = triangle(rgb(255,0,0), varray(farray(i)%x), varray(farray(i)%y), varray(farray(i)%z))
             end do
 
         end subroutine make_triangle

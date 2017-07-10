@@ -607,19 +607,21 @@ Contains
    end function barycentric
 
 
-   subroutine draw_triangleRGBA(img, texture, pts, zbuffer, uvs, intensity, wire)
+   subroutine draw_triangleRGBA(img, pts, zbuffer, intensity, colour, texture, uvs, wire)
 
       use triangleclass
       use types
 
       implicit none
 
-      type(RGBAimage),      intent(INOUT) :: img, texture
-      type(ivec),           intent(INOUT) :: pts(:)
-      type(vector),         intent(IN)    :: uvs(:)
-      logical, optional,    intent(IN)    :: wire
-      real,                 intent(INOUT) :: zbuffer(:)
-      real,                 intent(IN)    :: intensity
+      type(RGBAimage),           intent(INOUT) :: img
+      type(RGBAimage), optional, intent(IN)    :: texture
+      type(RGBA),      optional, intent(IN)    :: colour
+      type(ivec),                intent(INOUT) :: pts(:)
+      type(vector),    optional, intent(IN)    :: uvs(:)
+      logical,         optional, intent(IN)    :: wire
+      real,                      intent(INOUT) :: zbuffer(:)
+      real,                      intent(IN)    :: intensity
 
       type(vector) :: uv
       type(RGBA) :: c
@@ -630,7 +632,6 @@ Contains
       real         :: bc_screen(3)
 
       if(.not. present(wire))then
-
          bmin = [img%width, img%height]
          bmax = [0, 0]
          clamp = [img%width, img%height]
@@ -658,16 +659,20 @@ Contains
                   p%z = p%z + pts(k)%z*bc_screen(k)
                end do
 
-               !interpolate uv corrds
-               uv = uvs(1)*tmp%x + uvs(2)*tmp%y + uvs(3)*tmp%z
-
                if(zbuffer(int(p%x+p%y*img%width)) < p%z)then
                   zbuffer(int(p%x+p%y*img%width)) = p%z
-                  !get texture colour
-                  call get_pixel(texture, int(uv%x), int(uv%y), c)
-                  !add lighting
-                  c = c * intensity
-                  call set_pixel(img, p%x, p%y, c)
+                  if(present(texture))then
+                     if(.not. present(uvs))error stop "Need uvs"
+                     !interpolate uv corrds
+                     uv = uvs(1)*tmp%x + uvs(2)*tmp%y + uvs(3)*tmp%z
+                     !get texture colour
+                     call get_pixel(texture, int(uv%x), int(uv%y), c)
+                     !add lighting
+                     c = c * intensity
+                     call set_pixel(img, p%x, p%y, c)
+                  else
+                     call set_pixel(img, p%x, p%y, colour)
+                  end if
                end if
             end do
          end do

@@ -6,6 +6,7 @@ program openFl
     use triangleclass
     use types
     use iso_fortran_env
+    use utils, only : str
 
     implicit none
 
@@ -16,10 +17,14 @@ program openFl
     type(RGBA)          :: colour
     type(ivec)          :: screenCoor(3)
     type(vector)        :: worldCoor(3), v, n, light_dir, uv(3)
-    character(len=256)  :: arg
+    character(len=256)  :: arg, pwd
     integer             :: i, j, height, width, depth, idx, k
     real                :: intensity, finish, start
     real, allocatable   :: zbuffer(:)
+
+
+    call get_environment_variable('PWD',pwd)
+    pwd = pwd(:len(trim(pwd))-3)
 
     !get file name
     call get_command_argument(1, arg)
@@ -71,15 +76,22 @@ program openFl
 
             intensity = intensity
             if(intensity > 1.) intensity=1.
-            call draw_triangle(img, texture, screenCoor(:), zbuffer(:), uv, intensity)
+                              !(img, pts, zbuffer, intensity, colour, texture, uvs, wire)
+            call draw_triangle(img, screenCoor(:), zbuffer(:), intensity, texture=texture, uvs=uv)
         end if
     end do
+
+    print*,
     call cpu_time(finish)
-    print*,finish-start
+    print*,"Render took: "//str(finish-start,5)//'s'
+    print*,
+
     !flip image
     call flip(img)
     !save image
-    call save_image(img, "/home/lewis/programs/OpenFl/data/output", '.png')
+    call save_image(img, trim(pwd)//"data/output", '.png')
+
+    call execute_command_line("eog "//trim(pwd)//"data/output.png")
 
 
     do i =1, width-1

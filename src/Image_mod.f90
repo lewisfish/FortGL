@@ -221,7 +221,7 @@ Contains
    
       implicit none
       
-      type(RGBimage), intent(INOUT) :: img
+      type(RGBimage), intent(IN)    :: img
       type(RGB),      intent(INOUT) :: colour
       integer,        intent(in)    :: x, y
 
@@ -237,7 +237,7 @@ Contains
    
       implicit none
       
-      type(RGBAimage), intent(INOUT) :: img
+      type(RGBAimage), intent(IN)    :: img
       type(RGBA),      intent(INOUT) :: colour
       integer,        intent(in)     :: x, y
 
@@ -249,6 +249,7 @@ Contains
 
    
    end subroutine get_pixelRGBA
+
 
    subroutine fill_imgRGB(img, colour)
 
@@ -727,7 +728,7 @@ Contains
       type(RGBAimage), intent(IN) :: img
       character(*),   intent(IN) :: filename, format
       
-      print*,filename//format
+      print*,'Saved image at: ',filename//format
       call write_ppm(filename//'.ppm', img, 'P6')
       call execute_command_line('convert '//filename//'.ppm '//filename//format)
       call execute_command_line('rm '//filename//'.ppm')
