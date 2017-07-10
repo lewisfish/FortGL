@@ -447,7 +447,7 @@ Contains
             do i = -radius, radius, 1
                do j = -radius, radius, 1
                   if(i*i + j*j <= radius*radius)then
-                     call get_pixelRGBA(img, p%x+i, p%y+j, c2)
+                     call get_pixel(img, p%x+i, p%y+j, c2)
                      c1 = alpha_comp(colour, c2)
                      call set_pixel(img, p%x+i, p%y+j, c1)
                   end if
@@ -464,35 +464,35 @@ Contains
          elseif(blend)then
             do while(x >= y)
 
-               call get_pixelRGBA(img, p%x+x, p%y+y, c2)
+               call get_pixel(img, p%x+x, p%y+y, c2)
                c1 = alpha_comp(colour, c2)
                call set_pixel(img, p%x + x, p%y + y , c1)
 
-               call get_pixelRGBA(img, p%x+y, p%y+x, c2)
+               call get_pixel(img, p%x+y, p%y+x, c2)
                c1 = alpha_comp(colour, c2)
                call set_pixel(img, p%x + y, p%y + x , c1)
 
-               call get_pixelRGBA(img, p%x-y, p%y+x, c2)
+               call get_pixel(img, p%x-y, p%y+x, c2)
                c1 = alpha_comp(colour,c2)
                call set_pixel(img, p%x - y, p%y + x , c1)
 
-               call get_pixelRGBA(img, p%x-x, p%y+y, c2)
+               call get_pixel(img, p%x-x, p%y+y, c2)
                c1 = alpha_comp(colour, c2)
                call set_pixel(img, p%x - x, p%y + y , c1)
 
-               call get_pixelRGBA(img, p%x-x, p%y-y, c2)
+               call get_pixel(img, p%x-x, p%y-y, c2)
                c1 = alpha_comp(colour, c2)
                call set_pixel(img, p%x - x, p%y - y , c1)
 
-               call get_pixelRGBA(img, p%x-y, p%y-x, c2)
+               call get_pixel(img, p%x-y, p%y-x, c2)
                c1 = alpha_comp(colour, c2)
                call set_pixel(img, p%x - y, p%y - x , c1)
 
-               call get_pixelRGBA(img, p%x+y, p%y-x, c2)
+               call get_pixel(img, p%x+y, p%y-x, c2)
                c1 = alpha_comp(colour, c2)
                call set_pixel(img, p%x + y, p%y - x , c1)
 
-               call get_pixelRGBA(img, p%x+x, p%y-y, c2)
+               call get_pixel(img, p%x+x, p%y-y, c2)
                c1 = alpha_comp(colour, c2)
                call set_pixel(img, p%x + x, p%y - y , c1)
 
@@ -528,7 +528,7 @@ Contains
             do i = -radius, radius, 1
                do j = -radius, radius, 1
                   if(i*i + j*j <= radius*radius)then
-                     call get_pixelRGBA(img, p%x+i, p%y+j, c2)
+                     call get_pixel(img, p%x+i, p%y+j, c2)
                      c1 = alpha_comp(colour, c2)
                      call set_pixel(img, p%x+i, p%y+j, c1)
                   end if
@@ -607,26 +607,29 @@ Contains
    end function barycentric
 
 
-   subroutine draw_triangleRGBA(img, pts, zbuffer, uvs, intensity, colour)
+   subroutine draw_triangleRGBA(img, texture, pts, zbuffer, uvs, intensity, wire)
 
       use triangleclass
       use types
 
       implicit none
 
-      type(RGBAimage),      intent(INOUT) :: img
+      type(RGBAimage),      intent(INOUT) :: img, texture
       type(ivec),           intent(INOUT) :: pts(:)
       type(vector),         intent(IN)    :: uvs(:)
-      type(RGBA), optional, intent(IN)    :: colour
+      logical, optional,    intent(IN)    :: wire
       real,                 intent(INOUT) :: zbuffer(:)
       real,                 intent(IN)    :: intensity
+
+      type(vector) :: uv
+      type(RGBA) :: c
 
       type(vector) :: tmp
       type(ivec)   :: p
       integer      :: bmin(2), bmax(2), clamp(2), i, j, k
       real         :: bc_screen(3)
 
-      if(present(colour))then
+      if(.not. present(wire))then
 
          bmin = [img%width, img%height]
          bmax = [0, 0]
@@ -654,17 +657,29 @@ Contains
                do k = 1, 3
                   p%z = p%z + pts(k)%z*bc_screen(k)
                end do
+
+               !interpolate uv corrds
+               uv = uvs(1)*tmp%x + uvs(2)*tmp%y + uvs(3)*tmp%z
+
                if(zbuffer(int(p%x+p%y*img%width)) < p%z)then
                   zbuffer(int(p%x+p%y*img%width)) = p%z
-                  call set_pixel(img, p%x, p%y, colour)
+                  !get texture colour
+                  call get_pixel(texture, int(uv%x), int(uv%y), c)
+                  !add lighting
+                  c = c * intensity
+                  call set_pixel(img, p%x, p%y, c)
                end if
             end do
          end do
       else
-         !wireframe render
-         call draw_line(img, point(pts(1)%x, pts(1)%y), point(pts(2)%x, pts(2)%y), RGBA(255,255,255,255))
-         call draw_line(img, point(pts(2)%x, pts(2)%y), point(pts(3)%x, pts(3)%y), RGBA(255,255,255,255))
-         call draw_line(img, point(pts(3)%x, pts(3)%y), point(pts(1)%x, pts(1)%y), RGBA(255,255,255,255))
+         if(wire)then
+            !wireframe render
+            call draw_line(img, point(pts(1)%x, pts(1)%y), point(pts(2)%x, pts(2)%y), RGBA(255,255,255,255))
+            call draw_line(img, point(pts(2)%x, pts(2)%y), point(pts(3)%x, pts(3)%y), RGBA(255,255,255,255))
+            call draw_line(img, point(pts(3)%x, pts(3)%y), point(pts(1)%x, pts(1)%y), RGBA(255,255,255,255))
+         else
+            error stop 1
+         end if
       end if
    end subroutine draw_triangleRGBA
 
@@ -799,7 +814,7 @@ Contains
       integer                        :: x1
 
       if(old == colour)return
-      call get_pixelRGBA(img, x, y, c)
+      call get_pixel(img, x, y, c)
       if(c /= old)return
       x1 = x
       do while(x1 < img%width .and. RGBA(img%Red(x1, y), img%Green(x1, y), & 

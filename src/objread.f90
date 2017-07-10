@@ -12,7 +12,7 @@ Module obj_reader
 
         subroutine read_obj(filename, tarray, texture)
 
-            use Image, only : RGBAimage
+            use Image
 
             implicit none
 
@@ -41,7 +41,7 @@ Module obj_reader
                 if(line(1:2) == 'vt')texts = texts + 1
             end do
             close(u)
-            print*,verts,faces,texts
+
             allocate(varray(verts), farray(faces,3), textarray(texts))
             call read_vert(filename, varray)
             call read_faces(filename, farray)
@@ -52,6 +52,7 @@ Module obj_reader
             deallocate(varray,farray,textarray)
 
             call open_image(texture, filename(:len(filename)-4)//'_diffuse', '.tga')
+            call flip(texture)
         end subroutine read_obj
 
 
@@ -65,8 +66,6 @@ Module obj_reader
 
             type(vector) :: tmp(3), tmp2(3)
             integer :: i
-
-            !diffrent farray, varray and textarray sizes!!!
 
             do i = 1, size(farray,1)
                 tmp(:) = [varray(farray(i,1)%x), varray(farray(i,1)%y), varray(farray(i,1)%z)]

@@ -15,10 +15,10 @@ program openFl
     type(RGBAimage)     :: img, zbuf, texture
     type(RGBA)          :: colour
     type(ivec)          :: screenCoor(3)
-    type(vector)        :: worldCoor(3), v, n, light_dir
+    type(vector)        :: worldCoor(3), v, n, light_dir, uv(3)
     character(len=256)  :: arg
-    integer             :: i, j, height, width, depth, idx
-    real                :: intensity
+    integer             :: i, j, height, width, depth, idx, k
+    real                :: intensity, finish, start
     real, allocatable   :: zbuffer(:)
 
     !get file name
@@ -46,6 +46,8 @@ program openFl
     call read_obj(trim(arg), tarray, texture)
 
     !do render
+
+    call cpu_time(start)
     do i = 1, size(tarray)
         do j = 1, 3
             v = tarray(i)%vert(j)
@@ -53,19 +55,27 @@ program openFl
             worldCoor(j) = v  
         end do
 
+        !do simple lighting
         n = (worldCoor(3) - worldCoor(1)) .cross. (worldCoor(2) - worldCoor(1))
         n = normal(n)
         intensity = n .dot. light_dir
         if(intensity > 0)then
-            ! do k = 1, 3
-            !     uvs(k) = uv(i, k)
-            ! end do
-            intensity = intensity*255
-            if(intensity > 255) intensity=255
-            ! call draw_triangle(img, screenCoor(:), zbuffer(:), uvs, intensity)
+            !get uv coords
+            do k = 1, 3
+                uv(k) = tarray(i)%uvs(k)
+            end do
+
+            !adjust to size of texture
+            uv(:)%x = uv(:)%x*texture%width
+            uv(:)%y = uv(:)%y*texture%height
+
+            intensity = intensity
+            if(intensity > 1.) intensity=1.
+            call draw_triangle(img, texture, screenCoor(:), zbuffer(:), uv, intensity)
         end if
     end do
-
+    call cpu_time(finish)
+    print*,finish-start
     !flip image
     call flip(img)
     !save image

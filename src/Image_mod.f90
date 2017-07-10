@@ -100,6 +100,13 @@ Module Image
       module procedure RGBAimageequal
    end interface
    
+
+   private
+   public :: operator(+), assignment(=), operator(*), operator(.dist.), operator(==), operator(/=)
+   public :: save_image, open_image, write_ppm, read_ppm, flip, clampInt
+   public :: alloc_image, init_image, get_pixel, set_pixel, fill_img
+   public :: rgb, rgba, RGBimage, RGBAimage
+
 Contains
 
    subroutine init_imageRGB(img)
@@ -343,7 +350,7 @@ Contains
          clampInt = val
       end if
 
-   end function
+   end function clampInt
 
 
    logical function RGBnotequal(c1, c2)
