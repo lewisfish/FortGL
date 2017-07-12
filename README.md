@@ -6,9 +6,11 @@
 
 ## Features so far...
    * Reads .obj fileformat
+   * Bresenham's line algorithm
+   * rasterisation of triangles
    * Wireframe render of triangles
-   * Gouraud shading
-   * output in ppm
+   * textures
+   * output in ppm (with any formate available through imagemagick)
 
 
 
