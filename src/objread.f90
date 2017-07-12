@@ -20,10 +20,10 @@ Module obj_reader
             character(*),                intent(IN)    :: filename
             type(triangle), allocatable, intent(INOUT) :: tarray(:)
 
-            type(vector), allocatable :: varray(:), textarray(:)
+            type(vector), allocatable :: varray(:), textarray(:), narray(:)
             type(ivec),   allocatable :: farray(:,:)
 
-            integer            :: u, io, verts, faces, texts
+            integer            :: u, io, verts, faces, texts, norms
             character(len=256) :: line
 
             print*,'Reading: ',filename
@@ -40,13 +40,17 @@ Module obj_reader
                 if(line(1:2) == 'v ')verts = verts + 1
                 if(line(1:2) == 'f ')faces = faces + 1
                 if(line(1:2) == 'vt')texts = texts + 1
+                if(line(1:2) == 'vn')norms = norms + 1
             end do
             close(u)
+            print*,norms
 
-            allocate(varray(verts), farray(faces,3), textarray(texts))
+            allocate(varray(verts), farray(faces,3), textarray(texts), narray(norms))
             call read_vert(filename, varray)
             call read_faces(filename, farray)
             call read_texture_coor(filename, textarray)
+            call read_vert_normals(filename, narray)
+
 
             allocate(tarray(faces))
             call make_triangle(varray, farray, tarray, textarray)
@@ -165,8 +169,39 @@ Module obj_reader
 
 
             end do
-
+            close(u)
         end subroutine read_texture_coor
+
+
+        subroutine read_vert_normals(filename, array)
+
+            implicit none
+
+            character(*), intent(IN)  :: filename
+            type(vector), intent(OUT) :: array(:)
+
+            character(len=256) :: line
+            integer :: u, io, i
+
+            open(newunit=u, file=filename, iostat=io)
+
+            i = 1
+            do 
+                read(u, '(a)', iostat=io)line
+        
+                if(io /=0)exit  !eof
+
+                line = adjustl(line)
+                if(line(1:1) == '#' .or. line(1:1) == ' ' .or. line(1:1) == 'g')cycle
+
+                if(line(1:2) == 'vn')then
+                    line = line(5:)
+                    read(line, *)array(i)%x, array(i)%y, array(i)%z
+                    i = i + 1
+                end if
+            end do
+            close(u)
+        end subroutine read_vert_normals
 
 
         subroutine read_faces(filename, array)

@@ -16,11 +16,12 @@ program openFl
     type(RGBAimage)     :: img, zbuf, texture
     type(RGBA)          :: colour
     type(ivec)          :: screenCoor(3)
-    type(vector)        :: worldCoor(3), v, n, light_dir, uv(3)
+    type(vector)        :: worldCoor(3), v, n, light_dir, uv(3), camera
     character(len=256)  :: arg, pwd
     integer             :: i, j, height, width, depth, idx, k
     real                :: intensity, finish, start
     real, allocatable   :: zbuffer(:)
+    real :: projection(4,4), viewport(4,4)
 
 
     call get_environment_variable('PWD',pwd)
@@ -35,6 +36,12 @@ program openFl
     depth = 255
 
     light_dir = vector(0.,0.,-1.)
+    ! camera = vector(0., 0., 3.)
+
+    ! projection = identity(projection)
+    ! projection(4,2) = -1./camera%z
+    ! viewport = view_init(width/8, height/8, width*3/4, height*3/4, depth)
+
 
     !setup imgage object
     call init_image(img)
@@ -51,11 +58,12 @@ program openFl
     call read_obj(trim(arg), tarray, texture)
 
     !do render
-
     call cpu_time(start)
     do i = 1, size(tarray)
         do j = 1, 3
             v = tarray(i)%vert(j)
+            ! screenCoor(j) = m2v(matmul(matmul(viewport,projection),v2m(v)))
+            ! print*,screenCoor
             screenCoor(j) = ivec(int((v%x+1)*width/2.), int((v%y+1)*height/2.), int((v%z+1.)*depth/2.))
             worldCoor(j) = v  
         end do
@@ -92,7 +100,7 @@ program openFl
     call save_image(img, trim(pwd)//"data/output", '.png')
 
     !asynchronously display image if supported
-    call execute_command_line("eog "//trim(pwd)//"data/output.png", wait=.false.)
+    ! call execute_command_line("eog "//trim(pwd)//"data/output.png", wait=.false.)
 
 
     do i =1, width-1
@@ -107,6 +115,72 @@ program openFl
     call flip(zbuf)
     call save_image(zbuf, trim(pwd)//"data/zbuffer", '.png')
 
+contains
+
+    type(ivec) function m2v(m)
+
+        implicit none
+
+        real :: m(:,:)
+
+        m2v = ivec(int(m(1,1)/m(4,1)), int(m(2,1)/m(4,1)), int(m(3,1)/m(4,1)))
+
+    end function m2v
+
+    function v2m(v)
+
+        implicit none
+
+        real :: v2m(4,1)
+        type(vector), intent(IN) :: v
+
+        v2m(1,1) = v%x
+        v2m(2,1) = v%y
+        v2m(3,1) = v%z
+        v2m(4,1) = 1.
+
+    end function v2m
+
+
+    function identity(m)
+
+        implicit none
+
+        real, intent(INOUT) :: m(:,:)
+        real :: identity(size(m,1), size(m,2))
+
+        integer :: i, j
+
+        do i = 1, size(m,1)
+            do j = 1, size(m,2)
+                if(i == j)then
+                    m(i, j) = 1.
+                else
+                    m(i, j) = 0.
+                end if
+            end do
+        end do
+        identity = m
+    end function identity
+
+
+    function view_init(x, y, w, h, depth)
+
+        implicit none
+
+        real :: view_init(4,4)
+        integer, intent(IN)  :: x, y, w, h, depth
+
+        view_init = identity(view_init)
+        view_init(1,4) = x + w/2.
+        view_init(2,4) = y + h/2.
+        view_init(3,4) = depth/2.
+
+        view_init(1,1) = w/2.
+        view_init(2,2) = h/2.
+        view_init(3,3) = depth/2.
+
+    end function view_init
 end program openFl
 
 !head
