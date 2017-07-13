@@ -16,7 +16,7 @@ program openFl
     type(RGBAimage)     :: img, zbuf, texture
     type(RGBA)          :: colour
     type(ivec)          :: screenCoor(3)
-    type(vector)        :: worldCoor(3), v, n, light_dir, uv(3), camera
+    type(vector)        :: worldCoor(3), v, n, light_dir, uv(3), camera, norm(3)
     character(len=256)  :: arg, pwd
     integer             :: i, j, height, width, depth, idx, k
     real                :: intensity, finish, start
@@ -76,16 +76,18 @@ program openFl
             !get uv coords
             do k = 1, 3
                 uv(k) = tarray(i)%uvs(k)
+                norm(k) = tarray(i)%norms(k)
             end do
 
             !adjust to size of texture
             uv(:)%x = uv(:)%x*texture%width
             uv(:)%y = uv(:)%y*texture%height
 
-            intensity = intensity
-            if(intensity > 1.) intensity=1.
+            ! intensity = intensity
+            ! if(intensity > 1.) intensity=1.
                               !(img, pts, zbuffer, intensity, colour, texture, uvs, wire)
-            call draw_triangle(img, screenCoor(:), zbuffer(:), intensity, texture=texture, uvs=uv)
+            call draw_triangle(img, screenCoor(:), zbuffer(:), intensity, texture=texture, uvs=uv,&
+                               norms=norm, light=light_dir)
         end if
     end do
 
@@ -99,8 +101,8 @@ program openFl
     !save image
     call save_image(img, trim(pwd)//"data/output", '.png')
 
-    !asynchronously display image if supported
-    ! call execute_command_line("eog "//trim(pwd)//"data/output.png", wait=.false.)
+    !asynchronously display image if supported, if not do it synchronously 
+    call execute_command_line("eog "//trim(pwd)//"data/output.png", wait=.false.)
 
 
     do i =1, width-1

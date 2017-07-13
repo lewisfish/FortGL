@@ -43,7 +43,6 @@ Module obj_reader
                 if(line(1:2) == 'vn')norms = norms + 1
             end do
             close(u)
-            print*,norms
 
             allocate(varray(verts), farray(faces,3), textarray(texts), narray(norms))
             call read_vert(filename, varray)
@@ -53,25 +52,26 @@ Module obj_reader
 
 
             allocate(tarray(faces))
-            call make_triangle(varray, farray, tarray, textarray)
+            call make_triangle(varray, farray, tarray, textarray, narray)
             deallocate(varray,farray,textarray)
 
             if(texts > 0)then
+                ! call read_ppm(filename(:len(filename)-4)//'_diffuse.ppm', texture)
                 call open_image(texture, filename(:len(filename)-4)//'_diffuse', '.tga')
                 call flip(texture)
             end if
         end subroutine read_obj
 
 
-        subroutine make_triangle(varray, farray, tarray, textarray)
+        subroutine make_triangle(varray, farray, tarray, textarray, narray)
 
             implicit none
 
-            type(vector), intent(IN)      :: varray(:), textarray(:)
+            type(vector), intent(IN)      :: varray(:), textarray(:), narray(:)
             type(ivec),   intent(IN)      :: farray(:,:)
             type(triangle), intent(INOUT) :: tarray(:)
 
-            type(vector) :: tmp(3), tmp2(3)
+            type(vector) :: tmp(3), tmp2(3), tmp3(3)
             integer :: i
 
             do i = 1, size(farray,1)
@@ -79,7 +79,10 @@ Module obj_reader
                 if(size(textarray) > 1)then
                     tmp2(:) = [textarray(farray(i,2)%x), textarray(farray(i,2)%y), textarray(farray(i,2)%z)]
                 end if
-                tarray(i) = triangle(rgb(255,0,0), tmp, tmp2)
+                if(size(narray) > 1)then
+                    tmp3(:) = [narray(farray(i,3)%x), narray(farray(i,3)%y), narray(farray(i,3)%z)]
+                end if
+                tarray(i) = triangle(rgb(255,0,0), tmp, tmp2, tmp3)
             end do
 
         end subroutine make_triangle
@@ -189,7 +192,7 @@ Module obj_reader
             do 
                 read(u, '(a)', iostat=io)line
         
-                if(io /=0)exit  !eof
+                if(io /= 0)exit  !eof
 
                 line = adjustl(line)
                 if(line(1:1) == '#' .or. line(1:1) == ' ' .or. line(1:1) == 'g')cycle
@@ -211,8 +214,8 @@ Module obj_reader
             character(*), intent(IN)   :: filename
             type(ivec),   intent(OUT)  :: array(:, :)
 
-            integer            :: i, u, pos, pos2, io
-            character(len=256) :: line, old
+            integer            :: i, u, pos, io
+            character(len=256) :: line
             character(len=20)  :: char
 
             open(newunit=u, file=filename, iostat=io)
@@ -221,8 +224,6 @@ Module obj_reader
             do
                 read(u, '(a)',iostat=io) line
 
-                old = line
-
                 if(io /=0)exit  !eof
                 line = adjustl(line)
                 if(line(1:1) == '#' .or. line(1:1) == ' ' .or. line(1:1) == 'g')cycle
@@ -230,47 +231,17 @@ Module obj_reader
 
                 if(line(1:2) == 'f ')then
                     if(scan(line, '/') > 0)then
-                        
-                        !get geometry vertexs
-                        line = adjustl(line(2:))
-                        pos = index(trim(line(:)),'/')-1
-                        char = trim(adjustl(line(:pos)))
-                        read(char,'(I4.1)')array(i,1)%x
 
-                        line = adjustl(line(pos+1:))
-                        pos = index(trim(line(:)), ' ')
-                        pos2 = index(trim(line(pos:)), '/')+pos-2
-                        char = trim(adjustl(line(pos:pos2)))
-                        read(char,'(I4.1)')array(i,1)%y
+                        do
+                            pos = scan(line, '/')
+                            if(pos == 0)exit
+                            line(pos:pos) = ' '
+                        end do
+                        line = trim(line(3:))
 
-                        line = adjustl(line(pos2+1:))
-                        pos = index(trim(line(:)), ' ')
-                        pos2 = index(trim(line(pos:)), '/')+pos-2
-                        char = trim(adjustl(line(pos:pos2)))
-                        read(char,'(I4.1)')array(i,1)%z
-
-
-                        !get texture vertexs
-                        pos = scan(old, '/') + 1
-                        pos2 = scan(old(pos:), '/') + pos - 2
-                        char = trim(adjustl(old(pos:pos2)))
-                        read(char, '(I4.1)')array(i,2)%x
-
-                        old = trim(adjustl(old(pos2:)))
-                        pos = index(old(:), ' ')
-                        old = trim(adjustl(old(pos:)))
-                        pos = scan(old, '/') + 1
-                        pos2 = scan(old(pos:), '/') + pos - 2
-                        char = trim(adjustl(old(pos:pos2)))
-                        read(char, '(I4.1)')array(i,2)%y
-
-                        old = trim(adjustl(old(pos2:)))
-                        pos = index(old(:), ' ')
-                        old = trim(adjustl(old(pos:)))
-                        pos = scan(old, '/') + 1
-                        pos2 = scan(old(pos:), '/') + pos - 2
-                        char = trim(adjustl(old(pos:pos2)))
-                        read(char, '(I4.1)')array(i,2)%z
+                        read(line,*)array(i,1)%x, array(i,2)%x, array(i,3)%x, &
+                                   array(i,1)%y, array(i,2)%y, array(i,3)%y, &
+                                   array(i,1)%z, array(i,2)%z, array(i,3)%z
 
                         i = i + 1
                     else

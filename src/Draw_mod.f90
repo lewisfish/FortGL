@@ -604,7 +604,7 @@ Contains
    end function barycentric
 
 
-   subroutine draw_triangleRGBA(img, pts, zbuffer, intensity, colour, texture, uvs, wire)
+   subroutine draw_triangleRGBA(img, pts, zbuffer, intensity, colour, texture, uvs, norms, light, wire)
 
       use triangleclass
       use types
@@ -616,11 +616,12 @@ Contains
       type(RGBA),      optional, intent(IN)    :: colour
       type(ivec),                intent(INOUT) :: pts(:)
       type(vector),    optional, intent(IN)    :: uvs(:)
+      type(vector),optional :: norms(:), light
       logical,         optional, intent(IN)    :: wire
       real,                      intent(INOUT) :: zbuffer(:)
-      real,                      intent(IN)    :: intensity
+      real,                      intent(INOUT) :: intensity
 
-      type(vector) :: uv
+      type(vector) :: uv, n
       type(RGBA) :: c
 
       type(vector) :: tmp
@@ -662,6 +663,9 @@ Contains
                      if(.not. present(uvs))error stop "Need uvs"
                      !interpolate uv corrds
                      uv = uvs(1)*tmp%x + uvs(2)*tmp%y + uvs(3)*tmp%z
+                     n = norms(1)*tmp%x + norms(2)*tmp%y + norms(3)*tmp%z
+                     n = normal(n)
+                     intensity = abs( n .dot. light)
                      !get texture colour
                      call get_pixel(texture, int(uv%x), int(uv%y), c)
                      !add lighting

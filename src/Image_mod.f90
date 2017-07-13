@@ -504,6 +504,8 @@ Contains
       character(2)                     :: mode
       character                        :: code
       
+!horrible code fix!!!!!!!!!!!!!!!
+
       img%width = 0
       img%height = 0
       nullify(img%Red)
@@ -553,6 +555,7 @@ Contains
    
    end subroutine read_ppm_RGBA
    
+
    subroutine flip_RGBA(img)
 
       implicit none
@@ -629,6 +632,7 @@ Contains
       
    end subroutine write_ppm_RGB
 
+
    subroutine write_ppm_RGBA(filename, img, mode)
    
       implicit none
@@ -691,6 +695,7 @@ Contains
       call execute_command_line('rm '//filename//'.ppm')
    
    end subroutine open_imageRGB
+
 
    subroutine open_imageRGBA(img, filename, format)
    
