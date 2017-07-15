@@ -32,6 +32,7 @@ Module obj_reader
             verts = 0
             faces = 0
             texts = 0
+            norms = 0
             do
                 read(u, '(a)',iostat=io) line
                 if(io /=0)exit  !eof
@@ -44,6 +45,7 @@ Module obj_reader
             end do
             close(u)
 
+            print*,verts,faces,texts,norms
             allocate(varray(verts), farray(faces,3), textarray(texts), narray(norms))
             call read_vert(filename, varray)
             call read_faces(filename, farray)
@@ -53,10 +55,10 @@ Module obj_reader
 
             allocate(tarray(faces))
             call make_triangle(varray, farray, tarray, textarray, narray)
-            deallocate(varray,farray,textarray)
+            deallocate(varray,farray,textarray, narray)
 
             if(texts > 0)then
-                ! call read_ppm(filename(:len(filename)-4)//'_diffuse.ppm', texture)
+            !     ! call read_ppm(filename(:len(filename)-4)//'_diffuse.ppm', texture)
                 call open_image(texture, filename(:len(filename)-4)//'_diffuse', '.tga')
                 call flip(texture)
             end if
@@ -95,8 +97,9 @@ Module obj_reader
             character(*), intent(IN) :: filename
             type(vector), intent(OUT) :: array(:)
 
-            integer            :: i, u, pos, io
-            character(len=256) :: line, char
+            integer            :: i, u, io
+            character(len=256) :: line
+            real               :: valMax
 
             open(newunit=u, file=filename, iostat=io)
 
@@ -109,18 +112,10 @@ Module obj_reader
                 if(line(1:1) == '#' .or. line(1:1) == ' ' .or. line(1:1) == 'g')cycle
 
                 if(line(1:2) == 'v ')then
+
                     line = adjustl(line(2:))
-                    pos = index(trim(line(:)), ' ')
-                    char = trim(adjustl(line(:pos)))
-                    read(char,'(f100.8)')array(i)%x
+                    read(line,*)array(i)%x, array(i)%y, array(i)%z
 
-                    line = adjustl(line(pos:))
-                    pos = index(trim(line(:)), ' ')
-                    char = trim(adjustl(line(:pos)))
-                    read(char, '(F100.8)')array(i)%y
-
-                    char = adjustl(line(pos:))
-                    read(char, '(F100.8)')array(i)%z
                     i = i + 1
                 else
                     cycle
@@ -128,6 +123,12 @@ Module obj_reader
             end do
             close(u)
 
+            valMax = max(maxval(abs(array%x)),maxval(abs(array%y)),maxval(abs(array%z)))
+            if(valMax > 1.0)then
+                array%x = array%x / valMax
+                array%y = array%y / valMax
+                array%z = array%z / valMax
+            end if
         end subroutine read_vert
 
 
@@ -138,8 +139,8 @@ Module obj_reader
             character(*), intent(IN)    :: filename
             type(vector), intent(INOUT) :: array(:)
 
-            character(len=256) :: line, char
-            integer :: u, io, i, pos
+            character(len=256) :: line
+            integer            :: u, io, i
 
             open(newunit=u, file=filename, iostat=io)
 
@@ -153,18 +154,10 @@ Module obj_reader
                 if(line(1:1) == '#' .or. line(1:1) == ' ' .or. line(1:1) == 'g')cycle
 
                 if(line(1:2) == 'vt')then
+
                     line = adjustl(line(3:))
-                    pos = index(trim(line(:)), ' ')
-                    char = trim(adjustl(line(:pos)))
-                    read(char,'(f100.8)')array(i)%x
+                    read(line,*)array(i)%x, array(i)%y, array(i)%z
 
-                    line = adjustl(line(pos:))
-                    pos = index(trim(line(:)), ' ')
-                    char = trim(adjustl(line(:pos)))
-                    read(char, '(F100.8)')array(i)%y
-
-                    char = adjustl(line(pos:))
-                    read(char, '(F100.8)')array(i)%z
                     i = i + 1
                 else
                     cycle
@@ -198,7 +191,7 @@ Module obj_reader
                 if(line(1:1) == '#' .or. line(1:1) == ' ' .or. line(1:1) == 'g')cycle
 
                 if(line(1:2) == 'vn')then
-                    line = line(5:)
+                    line = adjustl(line(3:))
                     read(line, *)array(i)%x, array(i)%y, array(i)%z
                     i = i + 1
                 end if
@@ -214,9 +207,9 @@ Module obj_reader
             character(*), intent(IN)   :: filename
             type(ivec),   intent(OUT)  :: array(:, :)
 
-            integer            :: i, u, pos, io
+            integer            :: i, u, pos, io, posold
             character(len=256) :: line
-            character(len=20)  :: char
+            logical            :: flag
 
             open(newunit=u, file=filename, iostat=io)
 
@@ -231,33 +224,34 @@ Module obj_reader
 
                 if(line(1:2) == 'f ')then
                     if(scan(line, '/') > 0)then
-
+                        posold = 0
+                        flag = .false.
                         do
                             pos = scan(line, '/')
+                            if(posold + 1 == pos)flag = .true.
+                            posold = pos
                             if(pos == 0)exit
                             line(pos:pos) = ' '
                         end do
                         line = trim(line(3:))
 
-                        read(line,*)array(i,1)%x, array(i,2)%x, array(i,3)%x, &
-                                   array(i,1)%y, array(i,2)%y, array(i,3)%y, &
-                                   array(i,1)%z, array(i,2)%z, array(i,3)%z
-
+                        if(flag)then
+                            !case where format is #/#/# #/#/# #/#/#
+                            read(line,*)array(i,1)%x, array(i,3)%x, &
+                                        array(i,1)%y, array(i,3)%y, &
+                                        array(i,1)%z, array(i,3)%z
+                        else
+                            !case where format is #//# #//# #//#
+                            read(line,*)array(i,1)%x, array(i,2)%x, array(i,3)%x, &
+                                       array(i,1)%y, array(i,2)%y, array(i,3)%y, &
+                                       array(i,1)%z, array(i,2)%z, array(i,3)%z
+                        end if
                         i = i + 1
                     else
+                        !case where format is # # #
                         line = adjustl(line(2:))
-                        pos = index(trim(line(:)), ' ')
-                        char = trim(adjustl(line(:pos)))
-                        read(char,'(I4.1)')array(i,1)%x
+                        read(line,*) array(i,1)%x, array(i,1)%y, array(i,1)%z
 
-                        line = adjustl(line(pos:))
-                        pos = index(trim(line(:)), ' ')
-                        char = trim(adjustl(line(:pos)))
-                        read(char, '(I4.1)')array(i,1)%y
-
-                        line = adjustl(line(pos:))
-                        char = trim(adjustl(line))
-                        read(char, '(I4.1)')array(i,1)%z
                         i = i + 1
                     end if
                 else

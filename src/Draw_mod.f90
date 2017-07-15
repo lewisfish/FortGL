@@ -616,8 +616,8 @@ Contains
       type(RGBA),      optional, intent(IN)    :: colour
       type(ivec),                intent(INOUT) :: pts(:)
       type(vector),    optional, intent(IN)    :: uvs(:)
-      type(vector),optional :: norms(:), light
-      logical,         optional, intent(IN)    :: wire
+      type(vector),    optional                :: norms(:), light
+      logical,         optional                :: wire
       real,                      intent(INOUT) :: zbuffer(:)
       real,                      intent(INOUT) :: intensity
 
@@ -630,9 +630,9 @@ Contains
       real         :: bc_screen(3)
 
       if(.not. present(wire))then
-         bmin = [img%width, img%height]
+         bmin = [img%width, img%height-1]
          bmax = [0, 0]
-         clamp = [img%width, img%height]
+         clamp = [img%width, img%height-1]
 
          !get bounding box for triangle
          do i = 1, 3
@@ -656,9 +656,8 @@ Contains
                do k = 1, 3
                   p%z = p%z + int(pts(k)%z*bc_screen(k))
                end do
-
-               if(zbuffer(int(p%x+p%y*img%width)) < p%z)then
-                  zbuffer(int(p%x+p%y*img%width)) = p%z
+               if(zbuffer(int(p%x + p%y * img%width)) < p%z)then
+                  zbuffer(int(p%x + p%y * img%width)) = p%z
                   if(present(texture))then
                      if(.not. present(uvs))error stop "Need uvs"
                      !interpolate uv corrds
@@ -669,10 +668,18 @@ Contains
                      !get texture colour
                      call get_pixel(texture, int(uv%x), int(uv%y), c)
                      !add lighting
+                     ! c = rgbA(255,255,255,255)
                      c = c * intensity
                      call set_pixel(img, p%x, p%y, c)
                   else
-                     call set_pixel(img, p%x, p%y, colour)
+                     !interpolate uv corrds
+                     uv = uvs(1)*tmp%x + uvs(2)*tmp%y + uvs(3)*tmp%z
+                     n = norms(1)*tmp%x + norms(2)*tmp%y + norms(3)*tmp%z
+                     n = normal(n)
+                     intensity = abs( n .dot. light)
+                     c = rgbA(255,255,255,255)
+                     c = c * intensity
+                     call set_pixel(img, p%x, p%y, c)
                   end if
                end if
             end do

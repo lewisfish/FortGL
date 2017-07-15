@@ -83,11 +83,9 @@ program openFl
             uv(:)%x = uv(:)%x*texture%width
             uv(:)%y = uv(:)%y*texture%height
 
-            ! intensity = intensity
-            ! if(intensity > 1.) intensity=1.
-                              !(img, pts, zbuffer, intensity, colour, texture, uvs, wire)
-            call draw_triangle(img, screenCoor(:), zbuffer(:), intensity, texture=texture, uvs=uv,&
-                               norms=norm, light=light_dir)
+!                                              o       o       o    o      o      o
+            !(img, pts, zbuffer, intensity, colour, texture, uvs, norms, light, wire)
+            call draw_triangle(img, screenCoor(:), zbuffer(:), intensity, texture=texture, norms=norm, uvs=uv, light=light_dir)
         end if
     end do
 
