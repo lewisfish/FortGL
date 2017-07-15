@@ -656,6 +656,7 @@ Contains
                do k = 1, 3
                   p%z = p%z + int(pts(k)%z*bc_screen(k))
                end do
+               if(p%x < 1 .or. p%y < 1)cycle
                if(zbuffer(int(p%x + p%y * img%width)) < p%z)then
                   zbuffer(int(p%x + p%y * img%width)) = p%z
                   if(present(texture))then

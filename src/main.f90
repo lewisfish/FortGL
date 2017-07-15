@@ -16,12 +16,12 @@ program openFl
     type(RGBAimage)     :: img, zbuf, texture
     type(RGBA)          :: colour
     type(ivec)          :: screenCoor(3)
-    type(vector)        :: worldCoor(3), v, n, light_dir, uv(3), camera, norm(3)
+    type(vector)        :: worldCoor(3), v, n, light_dir, uv(3), centre, eye, norm(3)
     character(len=256)  :: arg, pwd
     integer             :: i, j, height, width, depth, idx, k
     real                :: intensity, finish, start
     real, allocatable   :: zbuffer(:)
-    real :: projection(4,4), viewport(4,4)
+    real :: projection(4,4), viewport(4,4), modelview(4,4)
 
 
     call get_environment_variable('PWD',pwd)
@@ -35,14 +35,17 @@ program openFl
     height = 800
     depth = 255
 
-    light_dir = vector(0.,0.,-1.)
-    ! camera = vector(0., 0., 3.)
+    light_dir = normal(vector(0.,0.,-1.))
+    centre = vector(0., 0., 0.)
+    eye = vector(1., 1., 3.)
 
-    ! projection = identity(projection)
-    ! projection(4,2) = -1./camera%z
-    ! viewport = view_init(width/8, height/8, width*3/4, height*3/4, depth)
+    modelview = lookat(eye, centre, vector(0.,1.,0.))
+    projection = identity(projection)
+    projection(4,3) = -1./magnitude(eye-centre)
+    viewport = view_init(width/8, height/8, width*3/4, height*3/4, depth)
 
-
+! print*,m2v(matmul(matmul(matmul(viewport,projection),modelview),v2m(v)))
+! stop
     !setup imgage object
     call init_image(img)
     call alloc_image(img, width, height)
@@ -62,8 +65,9 @@ program openFl
     do i = 1, size(tarray)
         do j = 1, 3
             v = tarray(i)%vert(j)
-            ! screenCoor(j) = m2v(matmul(matmul(viewport,projection),v2m(v)))
+            ! screenCoor(j) = m2v(matmul(matmul(matmul(viewport,projection),modelview),v2m(v)))
             ! print*,screenCoor
+            ! stop
             screenCoor(j) = ivec(int((v%x+1)*width/2.), int((v%y+1)*height/2.), int((v%z+1.)*depth/2.))
             worldCoor(j) = v  
         end do
@@ -85,7 +89,7 @@ program openFl
 
 !                                              o       o       o    o      o      o
             !(img, pts, zbuffer, intensity, colour, texture, uvs, norms, light, wire)
-            call draw_triangle(img, screenCoor(:), zbuffer(:), intensity, texture=texture, norms=norm, uvs=uv, light=light_dir)
+            call draw_triangle(img, screenCoor(:), zbuffer(:), intensity, uvs=uv, norms=norm, light=light_dir, texture=texture)
         end if
     end do
 
@@ -181,6 +185,31 @@ contains
         view_init(3,3) = depth/2.
 
     end function view_init
+
+    function lookat(eye, centre, up)
+
+        implicit none
+
+        real :: lookat(4,4), minv(4,4),tr(4,4)
+        type(vector), intent(IN)  :: eye, centre,  up
+
+        type(vector) :: x, y, z
+
+        z = normal(eye-centre)
+        x = normal(up .cross. z)
+        y = normal(z .cross. x)
+
+        minv = identity(minv)
+        tr = identity(tr)
+            minv(1,1:3) = [x%x,x%y,x%z]
+            minv(2,1:3) = [y%x,y%y,y%z]
+            minv(3,1:3) = [z%x,z%y,z%z]
+            tr(1:3,4) = [-centre%x,-centre%y,-centre%z]
+
+        lookat = matmul(minv,tr)
+    end function lookat
+
+
 end program openFl
 
 !head

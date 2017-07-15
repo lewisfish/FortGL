@@ -201,7 +201,6 @@ module types
 
             mag = magnitude(this)
             if(mag == 0.)then
-                ! print*,this
                 mag = 1.
             end if
             normal = vector(this%x/mag, this%y/mag, this%z/mag)

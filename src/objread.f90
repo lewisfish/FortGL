@@ -140,7 +140,7 @@ Module obj_reader
             type(vector), intent(INOUT) :: array(:)
 
             character(len=256) :: line
-            integer            :: u, io, i
+            integer            :: u, io, i,c,pos
 
             open(newunit=u, file=filename, iostat=io)
 
@@ -156,8 +156,23 @@ Module obj_reader
                 if(line(1:2) == 'vt')then
 
                     line = adjustl(line(3:))
-                    read(line,*)array(i)%x, array(i)%y, array(i)%z
+                    c = 0
+                    do
+                        pos = scan(trim(line), ' ')
 
+                        if(pos > 0)c = c + 1
+                        if(pos == 0)exit
+                        line(pos:pos) = ','
+                    end do
+                 
+                    if(c == 1)then
+                        read(line,*)array(i)%x, array(i)%y
+                        array(i)%z = 0.
+                    elseif(c == 2)then 
+                        read(line,*)array(i)%x, array(i)%y, array(i)%z
+                    else
+                        error stop 'Broken texture vert read...'
+                    end if
                     i = i + 1
                 else
                     cycle
@@ -207,7 +222,7 @@ Module obj_reader
             character(*), intent(IN)   :: filename
             type(ivec),   intent(OUT)  :: array(:, :)
 
-            integer            :: i, u, pos, io, posold
+            integer            :: i, u, pos, io, posold,c
             character(len=256) :: line
             logical            :: flag
 
@@ -226,25 +241,37 @@ Module obj_reader
                     if(scan(line, '/') > 0)then
                         posold = 0
                         flag = .false.
+                        c = 0
                         do
                             pos = scan(line, '/')
                             if(posold + 1 == pos)flag = .true.
                             posold = pos
                             if(pos == 0)exit
+                            c = c + 1
                             line(pos:pos) = ' '
                         end do
                         line = trim(line(3:))
-
-                        if(flag)then
-                            !case where format is #/#/# #/#/# #/#/#
-                            read(line,*)array(i,1)%x, array(i,3)%x, &
-                                        array(i,1)%y, array(i,3)%y, &
-                                        array(i,1)%z, array(i,3)%z
+                        ! print*,c,trim(line)
+                        ! stop
+                        if(c == 6)then
+                            if(flag)then
+                                !case where format is #//# #//# #//#
+                                read(line,*)array(i,1)%x, array(i,3)%x, &
+                                            array(i,1)%y, array(i,3)%y, &
+                                            array(i,1)%z, array(i,3)%z
+                            else
+                                !case where format is #/#/# #/#/# #/#/# 
+                                read(line,*)array(i,1)%x, array(i,2)%x, array(i,3)%x, &
+                                           array(i,1)%y, array(i,2)%y, array(i,3)%y, &
+                                           array(i,1)%z, array(i,2)%z, array(i,3)%z
+                            end if
+                        elseif(c == 3)then
+                            !case where format is #/# #/# #/# 
+                            read(line,*)array(i,1)%x, array(i,2)%x, &
+                                        array(i,1)%y, array(i,2)%y, &
+                                        array(i,1)%z, array(i,2)%z
                         else
-                            !case where format is #//# #//# #//#
-                            read(line,*)array(i,1)%x, array(i,2)%x, array(i,3)%x, &
-                                       array(i,1)%y, array(i,2)%y, array(i,3)%y, &
-                                       array(i,1)%z, array(i,2)%z, array(i,3)%z
+                            error stop 'unknown format for faces...'
                         end if
                         i = i + 1
                     else
