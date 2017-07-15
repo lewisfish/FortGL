@@ -6,7 +6,7 @@ Module obj_reader
     implicit none
     
     public  :: read_obj
-    private :: read_vert, read_faces, read_texture_coor, make_triangle
+    private :: read_vert, read_faces, read_texture_coor, read_vert_normals, make_triangle
 
     Contains
 

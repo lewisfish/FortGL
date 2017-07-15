@@ -10,6 +10,7 @@ SRCS =		utils.f90 \
 			types.f90 \
 			shapeclass.f90 \
 			triangle.f90 \
+			plyread.f90 \
 			objread.f90 \
 			Draw_mod.f90 \
 			main.f90 
