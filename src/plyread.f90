@@ -37,11 +37,11 @@ Module ply_reader
             print*,verts,faces, prop
             allocate(varray(verts), farray(faces,1))
             call read_vert(filename, varray, lines)
-            ! call read_faces(filename, farray)
-stop
-            ! allocate(tarray(faces))
-            ! call make_triangle(varray, farray, tarray)
-            ! deallocate(varray,farray)
+            call read_faces(filename, farray, lines, verts)
+
+            allocate(tarray(faces))
+            call make_triangle(varray, farray, tarray)
+            deallocate(varray,farray)
 
 
         end subroutine read_ply
@@ -76,7 +76,10 @@ stop
                 if(i==1 .and. verify(adjustl(line(1:3)), 'ply') /= 0)error stop 'not valid ply file'
 
                 !ignore comments
-                if(verify(line(1:7), "comment") == 0)cycle
+                if(verify(line(1:7), "comment") == 0)then
+                    i = i + 1
+                    cycle
+                end if
 
                 !get # of faces
                 if(verify(line(1:13), "element face") == 0)then
@@ -107,6 +110,7 @@ stop
             end do
             close(u)
         end subroutine read_header
+
 
         subroutine make_triangle(varray, farray, tarray)
 
@@ -154,7 +158,12 @@ stop
                 read(line,*)array(i)%x, array(i)%y, array(i)%z
             end do
             close(u)
-
+            ! valMin = min(minval(abs(array%x)),minval(abs(array%y)),minval(abs(array%z)))
+            ! If(valMin < 0.d-1)then
+            !     array%x = array%x / valMin
+            !     array%y = array%y / valMin
+            !     array%z = array%z / valMin
+            ! end if
             valMax = max(maxval(abs(array%x)),maxval(abs(array%y)),maxval(abs(array%z)))
             if(valMax > 1.0)then
                 array%x = array%x / valMax
@@ -163,76 +172,37 @@ stop
             end if
         end subroutine read_vert
 
-!to do fix faces
-        subroutine read_faces(filename, array)
+
+        subroutine read_faces(filename, array, lines, verts)
 
             implicit none
 
             character(*), intent(IN)   :: filename
             type(ivec),   intent(OUT)  :: array(:, :)
+            integer :: lines, verts
 
-            integer            :: i, u, pos, io, posold,c
+            integer            :: i, u, io
             character(len=256) :: line
-            logical            :: flag
 
             open(newunit=u, file=filename, iostat=io)
 
             i = 1
-            do
+            
+            read(u, '(a)',iostat=io) line
+            if(io /= 0)stop  !eof
+
+            line = adjustl(line)
+            do i = 1, lines+verts-1
+                read(u, '(a)',iostat=io)line
+            end do
+
+            do i = 1, size(array)
                 read(u, '(a)',iostat=io) line
-
-                if(io /=0)exit  !eof
-                line = adjustl(line)
-                if(line(1:1) == '#' .or. line(1:1) == ' ' .or. line(1:1) == 'g')cycle
-
-
-                if(line(1:2) == 'f ')then
-                    if(scan(line, '/') > 0)then
-                        posold = 0
-                        flag = .false.
-                        c = 0
-                        do
-                            pos = scan(line, '/')
-                            if(posold + 1 == pos)flag = .true.
-                            posold = pos
-                            if(pos == 0)exit
-                            c = c + 1
-                            line(pos:pos) = ' '
-                        end do
-                        line = trim(line(3:))
-                        ! print*,c,trim(line)
-                        ! stop
-                        if(c == 6)then
-                            if(flag)then
-                                !case where format is #//# #//# #//#
-                                read(line,*)array(i,1)%x, array(i,3)%x, &
-                                            array(i,1)%y, array(i,3)%y, &
-                                            array(i,1)%z, array(i,3)%z
-                            else
-                                !case where format is #/#/# #/#/# #/#/# 
-                                read(line,*)array(i,1)%x, array(i,2)%x, array(i,3)%x, &
-                                           array(i,1)%y, array(i,2)%y, array(i,3)%y, &
-                                           array(i,1)%z, array(i,2)%z, array(i,3)%z
-                            end if
-                        elseif(c == 3)then
-                            !case where format is #/# #/# #/# 
-                            read(line,*)array(i,1)%x, array(i,2)%x, &
-                                        array(i,1)%y, array(i,2)%y, &
-                                        array(i,1)%z, array(i,2)%z
-                        else
-                            error stop 'unknown format for faces...'
-                        end if
-                        i = i + 1
-                    else
-                        !case where format is # # #
-                        line = adjustl(line(2:))
-                        read(line,*) array(i,1)%x, array(i,1)%y, array(i,1)%z
-
-                        i = i + 1
-                    end if
-                else
-                    cycle
-                end if
+                line = adjustl(line(2:))
+                read(line,*)array(i,1)%x, array(i,1)%y, array(i,1)%z
+                array(i,1)%x = array(i,1)%x + 1
+                array(i,1)%y = array(i,1)%y + 1
+                array(i,1)%z = array(i,1)%z + 1
             end do
             close(u)
         end subroutine read_faces

@@ -285,6 +285,10 @@ Module obj_reader
                     cycle
                 end if
             end do
+            array(:,:)%x = abs(array(:,:)%x)
+            array(:,:)%y = abs(array(:,:)%y)
+            array(:,:)%z = abs(array(:,:)%z)
+
             close(u)
         end subroutine read_faces
 end module obj_reader

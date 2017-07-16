@@ -31,9 +31,8 @@ program openFl
     !get file name
     call get_command_argument(1, arg)
 
-    call read_ply(trim(arg), tarray)
-    stop
-    !set file size
+
+    !set image size
     width = 800
     height = 800
     depth = 255
@@ -60,9 +59,13 @@ program openFl
 
     zbuffer = -huge(1.)
 
-    !read obj file and texture
-    call read_obj(trim(arg), tarray, texture)
-
+    !read mesh file and texture
+    if(index(arg, '.ply') > 0)then
+        call read_ply(trim(arg), tarray)
+    else
+        call read_obj(trim(arg), tarray, texture)
+    end if
+        
     !do render
     call cpu_time(start)
     do i = 1, size(tarray)
