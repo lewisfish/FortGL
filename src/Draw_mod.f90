@@ -622,7 +622,7 @@ Contains
       real,                      intent(INOUT) :: intensity
 
       type(vector) :: uv, n
-      type(RGBA) :: c
+      type(RGBA)   :: c
 
       type(vector) :: tmp
       type(ivec)   :: p
@@ -674,7 +674,6 @@ Contains
                      call set_pixel(img, p%x, p%y, c)
                   else
                      !interpolate uv corrds
-                     uv = uvs(1)*tmp%x + uvs(2)*tmp%y + uvs(3)*tmp%z
                      n = norms(1)*tmp%x + norms(2)*tmp%y + norms(3)*tmp%z
                      n = normal(n)
                      intensity = abs( n .dot. light)

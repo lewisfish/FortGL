@@ -33,7 +33,6 @@ Module ply_reader
 
             call read_header(filename, verts, faces, prop, lines)
 
-
             print*,verts,faces, prop
             allocate(varray(verts), farray(faces,1))
             call read_vert(filename, varray, lines)
@@ -73,7 +72,8 @@ Module ply_reader
                 line = adjustl(line)
 
                 !check if ply file
-                if(i==1 .and. verify(adjustl(line(1:3)), 'ply') /= 0)error stop 'not valid ply file'
+                if(i == 1 .and. verify(adjustl(line(1:3)), 'ply') /= 0)error stop 'not valid ply file'
+                if(i == 2 .and. verify(adjustl(line(8:12)), 'ascii') /= 0)error stop "Binary .ply files not supported"
 
                 !ignore comments
                 if(verify(line(1:7), "comment") == 0)then
@@ -135,7 +135,7 @@ Module ply_reader
 
             implicit none
 
-            character(*), intent(IN) :: filename
+            character(*), intent(IN)  :: filename
             type(vector), intent(OUT) :: array(:)
 
             integer            :: i, u, io,lines
@@ -158,12 +158,7 @@ Module ply_reader
                 read(line,*)array(i)%x, array(i)%y, array(i)%z
             end do
             close(u)
-            ! valMin = min(minval(abs(array%x)),minval(abs(array%y)),minval(abs(array%z)))
-            ! If(valMin < 0.d-1)then
-            !     array%x = array%x / valMin
-            !     array%y = array%y / valMin
-            !     array%z = array%z / valMin
-            ! end if
+
             valMax = max(maxval(abs(array%x)),maxval(abs(array%y)),maxval(abs(array%z)))
             if(valMax > 1.0)then
                 array%x = array%x / valMax

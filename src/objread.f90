@@ -45,20 +45,21 @@ Module obj_reader
             end do
             close(u)
 
-            print*,verts,faces,texts,norms
             allocate(varray(verts), farray(faces,3), textarray(texts), narray(norms))
             call read_vert(filename, varray)
             call read_faces(filename, farray)
             call read_texture_coor(filename, textarray)
             call read_vert_normals(filename, narray)
 
+            !fit mesh into bi-unit cube
+            call fit_mesh(varray)
 
+            if(allocated(tarray))deallocate(tarray)
             allocate(tarray(faces))
             call make_triangle(varray, farray, tarray, textarray, narray)
             deallocate(varray,farray,textarray, narray)
 
             if(texts > 0)then
-            !     ! call read_ppm(filename(:len(filename)-4)//'_diffuse.ppm', texture)
                 call open_image(texture, filename(:len(filename)-4)//'_diffuse', '.tga')
                 call flip(texture)
             end if
@@ -99,7 +100,6 @@ Module obj_reader
 
             integer            :: i, u, io
             character(len=256) :: line
-            real               :: valMax
 
             open(newunit=u, file=filename, iostat=io)
 
@@ -122,13 +122,6 @@ Module obj_reader
                 end if
             end do
             close(u)
-
-            valMax = max(maxval(abs(array%x)),maxval(abs(array%y)),maxval(abs(array%z)))
-            if(valMax > 1.0)then
-                array%x = array%x / valMax
-                array%y = array%y / valMax
-                array%z = array%z / valMax
-            end if
         end subroutine read_vert
 
 
@@ -291,4 +284,29 @@ Module obj_reader
 
             close(u)
         end subroutine read_faces
+
+
+        subroutine fit_mesh(array)
+
+            implicit none
+
+            type(vector), intent(INOUT) :: array(:)
+
+            real :: xmax, ymax, zmax, xmin, ymin, zmin
+
+            xmin = minval(array(:)%x)
+            xmax = maxval(array(:)%x)
+
+            ymin = minval(array(:)%y)
+            ymax = maxval(array(:)%y)
+
+            zmin = minval(array(:)%z)
+            zmax = maxval(array(:)%z)
+
+            array(:)%x = (2. * (array(:)%x - xmin)/ (xmax - xmin) -1.)
+            array(:)%y = (2. * (array(:)%y - ymin)/ (ymax - ymin) -1.)
+            array(:)%z = (2. * (array(:)%z - zmin)/ (zmax - zmin) -1.)
+
+        end subroutine fit_mesh
+
 end module obj_reader

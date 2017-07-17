@@ -1,13 +1,13 @@
 program openFl
 
-    use Image
-    use Draw
+    use Image,           only : save_image, flip, RGBAimage, RGBA
+    use Draw,            only : draw_triangle
+    use utils,           only : str
+
     use obj_reader
     use ply_reader
     use triangleclass
     use types
-    use iso_fortran_env
-    use utils, only : str
 
     implicit none
 
@@ -31,7 +31,6 @@ program openFl
     !get file name
     call get_command_argument(1, arg)
 
-
     !set image size
     width = 800
     height = 800
@@ -46,8 +45,6 @@ program openFl
     projection(4,3) = -1./magnitude(eye-centre)
     viewport = view_init(width/8, height/8, width*3/4, height*3/4, depth)
 
-! print*,m2v(matmul(matmul(matmul(viewport,projection),modelview),v2m(v)))
-! stop
     !setup imgage object
     call init_image(img)
     call alloc_image(img, width, height)
@@ -72,8 +69,6 @@ program openFl
         do j = 1, 3
             v = tarray(i)%vert(j)
             ! screenCoor(j) = m2v(matmul(matmul(matmul(viewport,projection),modelview),v2m(v)))
-            ! print*,screenCoor
-            ! stop
             screenCoor(j) = ivec(int((v%x+1)*width/2.), int((v%y+1)*height/2.), int((v%z+1.)*depth/2.))
             worldCoor(j) = v  
         end do
@@ -92,7 +87,6 @@ program openFl
             !adjust to size of texture
             uv(:)%x = uv(:)%x*texture%width
             uv(:)%y = uv(:)%y*texture%height
-
 !                                              o       o       o    o      o      o
             !(img, pts, zbuffer, intensity, colour, texture, uvs, norms, light, wire)
             call draw_triangle(img, screenCoor(:), zbuffer(:), intensity, wire=.true.)!uvs=uv, norms=norm, light=light_dir, texture=texture)
@@ -112,7 +106,7 @@ program openFl
     !asynchronously display image if supported, if not do it synchronously 
     call execute_command_line("eog "//trim(pwd)//"data/output.png", wait=.false.)
 
-
+    !debug zbuffer
     do i =1, width-1
         do j = 1, height-1
             idx = i+j*width
