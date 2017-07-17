@@ -5,12 +5,12 @@
 ![alt text](https://raw.githubusercontent.com/lewisfish/FortGL/master/output.png "Wireframe head")
 
 ## Features so far...
-   * Reads .obj fileformat
+   * Reads .obj and simple .ply file formats
    * Bresenham's line algorithm
-   * rasterisation of triangles
+   * Rasterisation of triangles
    * Wireframe render of triangles
-   * textures
-   * output in ppm (with any formate available through imagemagick)
+   * Texture mapping
+   * Native output in ppm (with any format available through imagemagick)
 
 
 
@@ -19,6 +19,12 @@
 
 
 ![alt text](https://raw.githubusercontent.com/lewisfish/FortGL/master/teapot.png "Wireframe teapot")
+
+## Requirements
+  * Only tested on:
+  * gfortran 5.4.1+
+  * ImageMagick v 6.8.9-9
+  * Ubuntu 16.04 LTS
 
 ## ToDo
   * make more oop style
