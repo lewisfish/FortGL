@@ -22,7 +22,7 @@ program openFl
     integer             :: i, j, height, width, depth, idx, k
     real                :: intensity, finish, start
     real, allocatable   :: zbuffer(:)
-    real :: projection(4,4), viewport(4,4), modelview(4,4)
+    real :: projection(4,4), viewport(4,4), modelview(4,4),z(4,4)
 
 
     call get_environment_variable('PWD',pwd)
@@ -36,14 +36,24 @@ program openFl
     height = 800
     depth = 255
 
-    light_dir = normal(vector(0.,0.,-1.))
+    light_dir = normal(vector(1.,-1.,1.))
     centre = vector(0., 0., 0.)
-    eye = vector(0., 0., .1)
+    eye = vector(1., 1., 3.)
 
     modelview = lookat(eye, centre, vector(0.,1.,0.))
+    ! stop
     projection = identity(projection)
     projection(4,3) = -1./magnitude(eye-centre)
     viewport = view_init(width/8, height/8, width*3/4, height*3/4, depth)
+
+  
+    
+!     z=matmul(matmul(viewport,projection),modelview)
+!   do i = 1, 4
+!     print*,z(i,:)
+! end do
+!     stop
+
 
     !setup imgage object
     call init_image(img)
@@ -68,16 +78,17 @@ program openFl
     do i = 1, size(tarray)
         do j = 1, 3
             v = tarray(i)%vert(j)
-            ! screenCoor(j) = m2v(matmul(matmul(matmul(viewport,projection),modelview),v2m(v)))
-            screenCoor(j) = ivec(int((v%x+1)*width/2.), int((v%y+1)*height/2.), int((v%z+1.)*depth/2.))
+            ! screenCoor(j) = m2v(matmul(matmul(viewport,projection),v2m(v)))
+            screenCoor(j) = m2v(matmul(matmul(matmul(viewport,projection),modelview),v2m(v)))
+            ! screenCoor(j) = ivec(int((v%x+1)*width/2.), int((v%y+1)*height/2.), int((v%z+1.)*depth/2.))
             worldCoor(j) = v  
         end do
 
         !do simple lighting
-        n = (worldCoor(3) - worldCoor(1)) .cross. (worldCoor(2) - worldCoor(1))
-        n = normal(n)
-        intensity = n .dot. light_dir
-        if(intensity > 0)then
+        ! n = (worldCoor(3) - worldCoor(1)) .cross. (worldCoor(2) - worldCoor(1))
+        ! n = normal(n)
+        ! intensity = n .dot. light_dir
+        ! if(intensity > 0)then
             !get uv coords
             do k = 1, 3
                 uv(k) = tarray(i)%uvs(k)
@@ -89,8 +100,8 @@ program openFl
             uv(:)%y = uv(:)%y*texture%height
 !                                              o       o       o    o      o      o
             !(img, pts, zbuffer, intensity, colour, texture, uvs, norms, light, wire)
-            call draw_triangle(img, screenCoor(:), zbuffer(:), intensity, wire=.true.)!uvs=uv, norms=norm, light=light_dir, texture=texture)
-        end if
+            call draw_triangle(img, screenCoor(:), zbuffer(:), intensity,wire=.true.)! uvs=uv, norms=norm, light=light_dir, texture=texture)
+        ! end if
     end do
 
     print*,
@@ -194,19 +205,28 @@ contains
         type(vector), intent(IN)  :: eye, centre,  up
 
         type(vector) :: x, y, z
+        real :: tmpx(3),tmpy(3),tmpz(3),tmpc(3)
+
 
         z = normal(eye-centre)
         x = normal(up .cross. z)
         y = normal(z .cross. x)
+        ! print*,'y',y
+
+        tmpx(1:3) = [x%x,x%y,x%z] 
+        tmpy(1:3) = [y%x,y%y,y%z] 
+        tmpz(1:3) = [z%x,z%y,z%z] 
+        tmpc(1:3) = [centre%x,centre%y,centre%z] 
 
         minv = identity(minv)
-        tr = identity(tr)
-            minv(1,1:3) = [x%x,x%y,x%z]
-            minv(2,1:3) = [y%x,y%y,y%z]
-            minv(3,1:3) = [z%x,z%y,z%z]
-            tr(1:3,4) = [-centre%x,-centre%y,-centre%z]
-
-        lookat = matmul(minv,tr)
+        ! tr = identity(tr)
+        do i = 1, 3
+            minv(1,i) = tmpx(i)![x%x,x%y,x%z]
+            minv(2,i) = tmpy(i)![y%x,y%y,y%z]
+            minv(3,i) = tmpz(i)![z%x,z%y,z%z]
+            minv(i,4) = -tmpc(i)![-centre%x,-centre%y,-centre%z]
+        end do
+        lookat = minv
     end function lookat
 
 

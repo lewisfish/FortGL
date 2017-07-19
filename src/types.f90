@@ -172,7 +172,7 @@ module types
             integer                :: i, j, k
 
             i = (a%y * b%z) - (b%y * a%z)
-            j = (a%x * b%z) - (b%x * a%z)
+            j = -((a%x * b%z) - (b%x * a%z))
             k = (a%x * b%y) - (b%x * a%y)
 
             j = -j
