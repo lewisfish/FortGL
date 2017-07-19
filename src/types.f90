@@ -12,6 +12,10 @@ module types
         integer :: x, y, z
     end type ivec
 
+    type point
+        integer :: x, y
+    end type point
+
     interface operator (.dot.)
         module procedure vecDot
     end interface
@@ -38,13 +42,75 @@ module types
         module procedure ivecAdd
     end interface
 
+    interface operator(-)
+        module procedure pointSub
+    end interface
+
+    interface operator(+)
+       module procedure pointAdd
+    end interface
+
+    interface operator(*)
+       module procedure pointmultscal
+    end interface
+
+    interface swap
+        module procedure swap_I
+    end interface
 
     private
-    public :: vector, ivec
+    public :: vector, ivec, point
     public :: operator(.dot.), operator(.cross.), operator(-), operator(*), operator(+)
-    public :: magnitude, normal
+    public :: magnitude, normal, swap
 
     contains
+    
+        subroutine swap_I(a, b)
+
+            implicit none
+
+            integer, intent(INOUT) :: a, b
+            integer                :: tmp
+
+            tmp = a
+            a = b
+            b = tmp
+
+        end subroutine swap_I
+
+        type(point) function pointSub(a, b)
+
+           implicit none
+
+           type(point), intent(IN) :: a, b
+
+           pointSub = point(a%x - b%x, a%y - b%y)
+
+        end function pointSub
+
+
+        type(point) function pointAdd(a, b)
+
+            implicit none
+
+            type(point), intent(IN) :: a, b
+
+            pointAdd = point(a%x + b%x, a%y + b%y)
+
+        end function pointAdd
+
+
+        type(point) function pointmultscal(a, b)
+
+            implicit none
+
+            type(point), intent(IN) :: a
+            real,        intent(IN) :: b
+
+            pointmultscal = point(int(a%x * b), int(a%y * b))
+
+        end function pointmultscal
+
         function colourmultiplyvector(b, a)
 
             type(RGB),    intent(IN) :: a

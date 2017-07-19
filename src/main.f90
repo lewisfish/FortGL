@@ -1,7 +1,7 @@
 program openFl
 
     use Image,           only : save_image, flip, RGBAimage, RGBA
-    use Draw,            only : draw_triangle
+    use render
     use utils,           only : str
 
     use obj_reader
@@ -17,12 +17,12 @@ program openFl
     type(RGBAimage)     :: img, zbuf, texture
     type(RGBA)          :: colour
     type(ivec)          :: screenCoor(3)
-    type(vector)        :: worldCoor(3), v, n, light_dir, uv(3), centre, eye, norm(3)
+    type(vector)        :: worldCoor(3), v, light_dir, uv(3), centre, eye, norm(3)
     character(len=256)  :: arg, pwd
     integer             :: i, j, height, width, depth, idx, k
     real                :: intensity, finish, start
     real, allocatable   :: zbuffer(:)
-    real :: projection(4,4), viewport(4,4), modelview(4,4),z(4,4)
+    real                :: projection(4,4), viewport(4,4), modelview(4,4)
 
 
     call get_environment_variable('PWD',pwd)
@@ -41,19 +41,8 @@ program openFl
     eye = vector(1., 1., 3.)
 
     modelview = lookat(eye, centre, vector(0.,1.,0.))
-    ! stop
-    projection = identity(projection)
-    projection(4,3) = -1./magnitude(eye-centre)
+    projection = proj(-1./magnitude(eye-centre))
     viewport = view_init(width/8, height/8, width*3/4, height*3/4, depth)
-
-  
-    
-!     z=matmul(matmul(viewport,projection),modelview)
-!   do i = 1, 4
-!     print*,z(i,:)
-! end do
-!     stop
-
 
     !setup imgage object
     call init_image(img)
@@ -78,30 +67,22 @@ program openFl
     do i = 1, size(tarray)
         do j = 1, 3
             v = tarray(i)%vert(j)
-            ! screenCoor(j) = m2v(matmul(matmul(viewport,projection),v2m(v)))
             screenCoor(j) = m2v(matmul(matmul(matmul(viewport,projection),modelview),v2m(v)))
-            ! screenCoor(j) = ivec(int((v%x+1)*width/2.), int((v%y+1)*height/2.), int((v%z+1.)*depth/2.))
             worldCoor(j) = v  
         end do
 
-        !do simple lighting
-        ! n = (worldCoor(3) - worldCoor(1)) .cross. (worldCoor(2) - worldCoor(1))
-        ! n = normal(n)
-        ! intensity = n .dot. light_dir
-        ! if(intensity > 0)then
-            !get uv coords
-            do k = 1, 3
-                uv(k) = tarray(i)%uvs(k)
-                norm(k) = tarray(i)%norms(k)
-            end do
+        !get uv coords
+        do k = 1, 3
+            uv(k) = tarray(i)%uvs(k)
+            norm(k) = tarray(i)%norms(k)
+        end do
 
-            !adjust to size of texture
-            uv(:)%x = uv(:)%x*texture%width
-            uv(:)%y = uv(:)%y*texture%height
+        !adjust to size of texture
+        uv(:)%x = uv(:)%x*texture%width
+        uv(:)%y = uv(:)%y*texture%height
 !                                              o       o       o    o      o      o
-            !(img, pts, zbuffer, intensity, colour, texture, uvs, norms, light, wire)
-            call draw_triangle(img, screenCoor(:), zbuffer(:), intensity,wire=.true.)! uvs=uv, norms=norm, light=light_dir, texture=texture)
-        ! end if
+        !(img, pts, zbuffer, intensity, colour, texture, uvs, norms, light, wire)
+        call draw_triangle(img, screenCoor(:), zbuffer(:), intensity,wire=.true.)! uvs=uv, norms=norm, light=light_dir, texture=texture)
     end do
 
     print*,
@@ -129,107 +110,6 @@ program openFl
 
     call flip(zbuf)
     call save_image(zbuf, trim(pwd)//"data/zbuffer", '.png')
-
-contains
-
-    type(ivec) function m2v(m)
-
-        implicit none
-
-        real :: m(:,:)
-
-        m2v = ivec(int(m(1,1)/m(4,1)), int(m(2,1)/m(4,1)), int(m(3,1)/m(4,1)))
-
-    end function m2v
-
-    function v2m(v)
-
-        implicit none
-
-        real :: v2m(4,1)
-        type(vector), intent(IN) :: v
-
-        v2m(1,1) = v%x
-        v2m(2,1) = v%y
-        v2m(3,1) = v%z
-        v2m(4,1) = 1.
-
-    end function v2m
-
-
-    function identity(m)
-
-        implicit none
-
-        real, intent(INOUT) :: m(:,:)
-        real :: identity(size(m,1), size(m,2))
-
-        integer :: i, j
-
-        do i = 1, size(m,1)
-            do j = 1, size(m,2)
-                if(i == j)then
-                    m(i, j) = 1.
-                else
-                    m(i, j) = 0.
-                end if
-            end do
-        end do
-        identity = m
-    end function identity
-
-
-    function view_init(x, y, w, h, depth)
-
-        implicit none
-
-        real :: view_init(4,4)
-        integer, intent(IN)  :: x, y, w, h, depth
-
-        view_init = identity(view_init)
-        view_init(1,4) = x + w/2.
-        view_init(2,4) = y + h/2.
-        view_init(3,4) = depth/2.
-
-        view_init(1,1) = w/2.
-        view_init(2,2) = h/2.
-        view_init(3,3) = depth/2.
-
-    end function view_init
-
-    function lookat(eye, centre, up)
-
-        implicit none
-
-        real :: lookat(4,4), minv(4,4),tr(4,4)
-        type(vector), intent(IN)  :: eye, centre,  up
-
-        type(vector) :: x, y, z
-        real :: tmpx(3),tmpy(3),tmpz(3),tmpc(3)
-
-
-        z = normal(eye-centre)
-        x = normal(up .cross. z)
-        y = normal(z .cross. x)
-        ! print*,'y',y
-
-        tmpx(1:3) = [x%x,x%y,x%z] 
-        tmpy(1:3) = [y%x,y%y,y%z] 
-        tmpz(1:3) = [z%x,z%y,z%z] 
-        tmpc(1:3) = [centre%x,centre%y,centre%z] 
-
-        minv = identity(minv)
-        ! tr = identity(tr)
-        do i = 1, 3
-            minv(1,i) = tmpx(i)![x%x,x%y,x%z]
-            minv(2,i) = tmpy(i)![y%x,y%y,y%z]
-            minv(3,i) = tmpz(i)![z%x,z%y,z%z]
-            minv(i,4) = -tmpc(i)![-centre%x,-centre%y,-centre%z]
-        end do
-        lookat = minv
-    end function lookat
-
-
 end program openFl
 
 !head
