@@ -143,7 +143,7 @@ contains
 
         implicit none
 
-        type(ivec) :: a, b, c, s(2), u, p
+        type(vector) :: a, b, c, s(2), u, p
 
         s(1)%x = c%x - a%x 
         s(1)%y = b%x - a%x 
@@ -164,111 +164,73 @@ contains
     end function barycentric
 
 
-    ! subroutine draw_triangleRGBA(img, pts, zbuffer, intensity, colour, texture, uvs, norms, light, wire)
-    subroutine draw_triangleRGBA(img, ishader, zbuffer, pts, wire)
+    subroutine draw_triangleRGBA(img, ishader, zbuffer, pts)
+
       use triangleclass
       use shaderclass
+
       implicit none
 
-      type(RGBAimage),           intent(INOUT) :: img
-      type(shader) :: ishader
-      ! type(RGBAimage), optional, intent(IN)    :: texture
-      ! type(RGBA),      optional, intent(IN)    :: colour
-      type(ivec),                intent(INOUT) :: pts(:)
-      ! type(vector),    optional, intent(IN)    :: uvs(:)
-      ! type(vector),    optional                :: norms(:), light
-      logical,         optional                :: wire
-      real,                      intent(INOUT) :: zbuffer(:)
-      ! real,                      intent(INOUT) :: intensity
+      type(RGBAimage), intent(INOUT) :: img
+      real,            intent(INOUT) :: pts(:,:)
+      real,            intent(INOUT) :: zbuffer(:)
+      type(shader)                   :: ishader
 
-      ! type(vector) :: uv, n
       type(RGBA)   :: c
-
-      type(vector) :: tmp
+      type(vector) :: tmp, tmp1, tmp2, tmp3
       type(ivec)   :: p
-      integer      :: bmin(2), bmax(2), clamp(2), i, j, k
-      real         :: bc_screen(3), w, z, frag_depth
-      logical :: discard
+      integer      :: i, j
+      real         :: w, z, frag_depth, bmin(2), bmax(2),clamp(2)
+      logical      :: discard
 
-      if(.not. present(wire))then
-         bmin = [img%width, img%height-1]
-         bmax = [0, 0]
+         bmin = [99999., 9999.]
+         bmax = [-9999., -9999.]
          clamp = [img%width, img%height-1]
 
          !get bounding box for triangle
          do i = 1, 3
-               bmin(1) = min(bmin(1), pts(i)%x)
-               bmin(2) = min(bmin(2), pts(i)%y)
-
-               bmax(1) = min(clamp(1), max(bmax(1), pts(i)%x))
-               bmax(2) = min(clamp(2), max(bmax(2), pts(i)%y))
+            do j = 1, 2
+               bmin(j) = min(bmin(j), pts(j,i)/pts(4,i))
+               bmax(j) = max(bmax(j), pts(j,i)/pts(4,i))
+           end do
          end do
 
-         do i = bmin(1), bmax(1)
-            do j = bmin(2), bmax(2)
-               p%x = i
-               p%y = j
-               p%z = 0
+        do i = int(bmin(1)), int(bmax(1))
+            do j = int(bmin(2)), int(bmax(2))
+                p%x = i
+                p%y = j
+                p%z = 0
 
-               tmp = barycentric(pts(1)/pts(1)%z, pts(2)/pts(2)%z, pts(3)/pts(3)%z, p)
-               bc_screen = [tmp%x, tmp%y, tmp%z]
-               z = pts(1)%y * tmp%x + pts(2)%y * tmp%y + pts(3)%y * tmp%z;
-               w = pts(1)%z * tmp%x + pts(2)%z * tmp%y + pts(3)%z * tmp%z;
-               frag_depth = max(0, min(255, int(z/w+.5)));
+                pts(:,1) = pts(:,1)/pts(4,1)
+                pts(:,2) = pts(:,2)/pts(4,2)
+                pts(:,3) = pts(:,3)/pts(4,3)
 
-               if(tmp%x < 0. .or. tmp%y < 0. .or. tmp%z < 0. &
-                  .or. zbuffer(int(p%x+p%y*img%width)) > frag_depth)cycle
+                tmp1 = vector(pts(1,1), pts(2,1), pts(3,1))
+                tmp2 = vector(pts(1,2), pts(2,2), pts(3,2))
+                tmp3 = vector(pts(1,3), pts(2,3), pts(3,3))
+
+                tmp = barycentric(tmp1, tmp2, tmp3, vector(p%x,p%y,p%z))
+
+                z = pts(3,1)*tmp%x + pts(3,2)*tmp%y + pts(3,3)*tmp%z
+                w = pts(4,1)*tmp%x + pts(4,2)*tmp%y + pts(4,3)*tmp%z
+                frag_depth = max(0, min(255, int(z/w+.5)))
+                if(tmp%x <0 .or. tmp%y <0 .or. tmp%z <0 .or. zbuffer(int(p%x + p%y * img%width)) > frag_depth)cycle
                 discard = ishader%fragment(tmp, c)
                 if(.not. discard)then
-                    zbuffer(int(p%x + p%y * img%width)) = p%z
+                  zbuffer(int(p%x + p%y * img%width)) = frag_depth
                     call set_pixel(img, p%x, p%y, c)
                 end if
 
 
-
-
-
-               ! if(bc_screen(1) < 0. .or. bc_screen(2) < 0. .or. bc_screen(3) < 0.)cycle
-               ! do k = 1, 3
-               !    p%z = p%z + int(pts(k)%z*bc_screen(k))
-               ! end do
-               ! if(p%x < 1 .or. p%y < 1)cycle
-               ! if(zbuffer(int(p%x + p%y * img%width)) < p%z)then
-               !    zbuffer(int(p%x + p%y * img%width)) = p%z
-               !    if(present(texture))then
-               !       if(.not. present(uvs))error stop "Need uvs"
-               !       !interpolate uv corrds
-               !       uv = uvs(1)*tmp%x + uvs(2)*tmp%y + uvs(3)*tmp%z
-               !       n = norms(1)*tmp%x + norms(2)*tmp%y + norms(3)*tmp%z
-               !       n = normal(n)
-               !       intensity = abs( n .dot. light)
-               !       !get texture colour
-               !       call get_pixel(texture, int(uv%x), int(uv%y), c)
-               !       !add lighting
-               !       ! c = rgbA(255,255,255,255)
-               !       c = c * intensity
-               !       call set_pixel(img, p%x, p%y, c)
-               !    else
-               !       !interpolate uv corrds
-               !       n = norms(1)*tmp%x + norms(2)*tmp%y + norms(3)*tmp%z
-               !       n = normal(n)
-               !       intensity = abs( n .dot. light)
-               !       c = rgbA(255,255,255,255)
-               !       c = c * intensity
-               !       call set_pixel(img, p%x, p%y, c)
-               !    end if
-               ! end if
             end do
-         end do
-      else
-         if(wire)then
+        end do
+
+      ! else
+      !    if(wire)then
             !wireframe render
-            call draw_line(img, point(pts(1)%x, pts(1)%y), point(pts(2)%x, pts(2)%y), RGBA(255,255,255,255))
-            call draw_line(img, point(pts(2)%x, pts(2)%y), point(pts(3)%x, pts(3)%y), RGBA(255,255,255,255))
-            call draw_line(img, point(pts(3)%x, pts(3)%y), point(pts(1)%x, pts(1)%y), RGBA(255,255,255,255))
-         else
-            error stop 1
-         end if
-      end if
+            ! call draw_line(img, point(pts(1)%x, pts(1)%y), point(pts(2)%x, pts(2)%y), RGBA(255,255,255,255))
+            ! call draw_line(img, point(pts(2)%x, pts(2)%y), point(pts(3)%x, pts(3)%y), RGBA(255,255,255,255))
+            ! call draw_line(img, point(pts(3)%x, pts(3)%y), point(pts(1)%x, pts(1)%y), RGBA(255,255,255,255))
+
    end subroutine draw_triangleRGBA
 end module render

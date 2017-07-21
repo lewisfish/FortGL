@@ -35,7 +35,6 @@ Module shaderclass
 
         intensity = tmp .dot. bar_c
         colour = RGBA(255,255,255,255) * intensity
-
         fragment_fn = .false.
         
     end function fragment_fn
@@ -52,13 +51,10 @@ Module shaderclass
         type(triangle), intent(IN) :: vertex
         integer,        intent(IN) :: i, j
         type(vector),   intent(IN) :: light
-        type(ivec)                 :: vertex_fn
-        real :: gl_vertex(4,1)
+        real :: gl_vertex(4,1), vertex_fn(4,1)
 
         this%varying_intensity(j) = max(0., (vertex%norms(j) .dot. light))
         gl_vertex = v2m(vertex%vert(j))
-        
-        vertex_fn = m2v(matmul(matmul(matmul(viewport,projection),modelview),gl_vertex))
-        
+        vertex_fn = matmul(matmul(matmul(viewport,projection),modelview),gl_vertex)
     end function vertex_fn
 end Module shaderclass

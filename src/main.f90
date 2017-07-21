@@ -18,7 +18,7 @@ program openFl
 
     type(RGBAimage)     :: img, zbuf, texture
     type(RGBA)          :: colour
-    type(ivec)          :: screenCoor(3)
+    real          :: screenCoor(4,3),tmp(4,1)
     type(vector)        :: worldCoor(3), v, light_dir, uv(3), centre, eye, norm(3)
     character(len=256)  :: arg, pwd
     integer             :: i, j, height, width, depth, idx, k
@@ -36,9 +36,10 @@ program openFl
     height = 800
     depth = 255
 
-    light_dir = normal(vector(1.,-1.,1.))
+    light_dir = normal(vector(1.,1.,1.))
     centre = vector(0., 0., 0.)
-    eye = vector(1., 1., 3.)
+    eye = vector(0., -1., 3.)
+screenCoor=0.
 
     modelview = lookat(eye, centre, vector(0.,1.,0.))
     projection = proj(-1./magnitude(eye-centre))
@@ -66,7 +67,8 @@ program openFl
     call cpu_time(start)
     do i = 1, size(tarray)
         do j = 1, 3
-            screenCoor(j) = ishader%vertex(tarray(i), i, j, light_dir)
+           tmp= ishader%vertex(tarray(i), i, j, light_dir)
+           screenCoor(:,j) = tmp(:,1)
         end do
         call draw_triangle(img, ishader, zbuffer, screenCoor)
     end do
@@ -75,11 +77,13 @@ program openFl
 
 
 
-!         do j = 1, 3
-!             v = tarray(i)%vert(j)
-!             screenCoor(j) = m2v(matmul(matmul(matmul(viewport,projection),modelview),v2m(v)))
-!             worldCoor(j) = v  
-!         end do
+        ! do j = 1, 3
+        !     v = tarray(i)%vert(j)
+        !     screenCoor(j) = m2v(matmul(matmul(matmul(viewport,projection),modelview),v2m(v)))
+        !     print*,screenCoor(j)
+        !     worldCoor(j) = v  
+        ! end do
+        !     stop
 
 !         !get uv coords
 !         do k = 1, 3
@@ -92,10 +96,10 @@ program openFl
 !         uv(:)%y = uv(:)%y*texture%height
 ! !                                              o       o       o    o      o      o
 !         !(img, pts, zbuffer, intensity, colour, texture, uvs, norms, light, wire)
-!         call draw_triangle(img, screenCoor(:), zbuffer(:), intensity,wire=.true.)! uvs=uv, norms=norm, light=light_dir, texture=texture)
+!         ! call draw_triangle(img, screenCoor(:), zbuffer(:), intensity,wire=.true.)! uvs=uv, norms=norm, light=light_dir, texture=texture)
     ! end do
 
-    print*,
+    print*,' '
     call cpu_time(finish)
     print*,"Render took: ",str(finish-start,5),'s'
     print*,''
