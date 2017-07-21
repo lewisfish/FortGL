@@ -10,8 +10,8 @@
    * Rasterisation of triangles
    * User defined shaders
    * Movable camera and perspective view
-   * ~~Wireframe render of triangles~~ currently broken
-   * ~~Texture mapping~~ not implmented anymore
+   * Wireframe render of triangles
+   * Texture mapping
    * Native output in ppm (with any format available through imagemagick)
 
 
@@ -31,7 +31,7 @@
   * Ubuntu 16.04 LTS
 
 ## ToDo
-  * re implment wire render and texture mapping
-  * normal mapping
-  * fix .obj for more than order 3 (i.e. more than just triangles)
-  * more file formats (both model input and image output formats)
+  * Fix wireframe render to use Nivida's solid wireframe render method
+  * Normal mapping
+  * Fix .obj for more than order 3 (i.e. more than just triangles)
+  * More file formats (.stl for model input, and image output formats)
