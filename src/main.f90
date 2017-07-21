@@ -1,28 +1,103 @@
+module userdef
+
+    use shaderclass
+
+    implicit none
+
+!user defined shaders here
+
+    type, extends(shader) :: toon
+        Contains
+            procedure, pass(this) :: fragment => fragment_fn
+            procedure, pass(this) :: vertex => vertex_fn
+    end type toon
+
+    Contains
+
+    logical function fragment_fn(this, bar_c, colour)
+
+        use image, only : RGBA, operator(*)
+        use types, only: operator(.dot.)
+
+        implicit none
+
+        class(toon) :: this
+        type(vector), intent(IN)  :: bar_c
+        type(vector) :: tmp
+        type(RGBA),   intent(INOUT)  :: colour
+
+        real :: intensity
+
+        tmp = vector(this%varying_intensity(1), this%varying_intensity(2), this%varying_intensity(3))
+
+        intensity = tmp .dot. bar_c
+
+        if(intensity >.85)then
+            intensity = 1.
+        elseif(intensity >.60)then
+            intensity = .80
+        elseif(intensity >.45) then
+            intensity = .60
+        elseif(intensity >.30)then
+            intensity = .45
+        elseif(intensity >.15)then
+            intensity = .30
+        else
+            intensity = 0
+        end if
+            colour = RGBA(255,155,0,255) * intensity
+        fragment_fn = .false.
+
+end function fragment_fn
+
+
+    function vertex_fn(this, vertex, i, j, light)
+
+        use triangleclass
+        use camera, only : viewport, projection, modelview, v2m, m2v
+
+        implicit none
+
+        class(toon)                :: this
+        type(triangle), intent(IN) :: vertex
+        integer,        intent(IN) :: i, j
+        type(vector),   intent(IN) :: light
+        
+        real :: gl_vertex(4,1), vertex_fn(4,1)
+
+        this%varying_intensity(j) = max(0., (vertex%norms(j) .dot. light))
+        gl_vertex = v2m(vertex%vert(j))
+        vertex_fn = matmul(matmul(matmul(viewport,projection),modelview),gl_vertex)
+end function vertex_fn
+
+end module userdef
+
 program openFl
 
-    use Image,           only : save_image, flip, RGBAimage, RGBA
-    use render
+    use Image,           only : save_image, flip, RGBAimage, RGBA, init_image, alloc_image, set_pixel
+    use render,          only : draw_triangle
     use utils,           only : str
-    use shaderclass
-    use obj_reader
-    use ply_reader
-    use triangleclass
+    use shaderclass,     only : gourand
+    use obj_reader,      only : read_obj
+    use ply_reader,      only : read_ply
+    use triangleclass,   only : triangle
     use camera
+    use userdef, only : toon
+
     use types
 
     implicit none
 
     !array of triangles
     type(triangle), allocatable :: tarray(:)
-    type(shader) :: ishader
+    type(gourand)               :: ishader
 
     type(RGBAimage)     :: img, zbuf, texture
     type(RGBA)          :: colour
-    real          :: screenCoor(4,3),tmp(4,1)
-    type(vector)        :: worldCoor(3), v, light_dir, uv(3), centre, eye, norm(3)
+    type(vector)        :: light_dir, centre, eye
     character(len=256)  :: arg, pwd
-    integer             :: i, j, height, width, depth, idx, k
-    real                :: intensity, finish, start
+    integer             :: i, j, height, width, depth, idx
+    real                :: finish, start, screenCoor(4,3), tmp(4,1)
     real, allocatable   :: zbuffer(:)
 
     call get_environment_variable('PWD',pwd)
@@ -38,8 +113,8 @@ program openFl
 
     light_dir = normal(vector(1.,1.,1.))
     centre = vector(0., 0., 0.)
-    eye = vector(0., -1., 3.)
-screenCoor=0.
+    eye = vector(0., 0., 3.)
+    screenCoor = 0.
 
     modelview = lookat(eye, centre, vector(0.,1.,0.))
     projection = proj(-1./magnitude(eye-centre))
@@ -73,32 +148,6 @@ screenCoor=0.
         call draw_triangle(img, ishader, zbuffer, screenCoor)
     end do
 
-
-
-
-
-        ! do j = 1, 3
-        !     v = tarray(i)%vert(j)
-        !     screenCoor(j) = m2v(matmul(matmul(matmul(viewport,projection),modelview),v2m(v)))
-        !     print*,screenCoor(j)
-        !     worldCoor(j) = v  
-        ! end do
-        !     stop
-
-!         !get uv coords
-!         do k = 1, 3
-!             uv(k) = tarray(i)%uvs(k)
-!             norm(k) = tarray(i)%norms(k)
-!         end do
-
-!         !adjust to size of texture
-!         uv(:)%x = uv(:)%x*texture%width
-!         uv(:)%y = uv(:)%y*texture%height
-! !                                              o       o       o    o      o      o
-!         !(img, pts, zbuffer, intensity, colour, texture, uvs, norms, light, wire)
-!         ! call draw_triangle(img, screenCoor(:), zbuffer(:), intensity,wire=.true.)! uvs=uv, norms=norm, light=light_dir, texture=texture)
-    ! end do
-
     print*,' '
     call cpu_time(finish)
     print*,"Render took: ",str(finish-start,5),'s'
@@ -125,18 +174,3 @@ screenCoor=0.
     call flip(zbuf)
     call save_image(zbuf, trim(pwd)//"data/zbuffer", '.png')
 end program openFl
-
-!head
-! p1 = point((tarray(i)%p1%x+1.)*800/2., (tarray(i)%p1%y+1.)*800/2.)        
-! p2 = point((tarray(i)%p2%x+1.)*800/2., (tarray(i)%p2%y+1.)*800/2.)        
-! p3 = point((tarray(i)%p3%x+1.)*800/2., (tarray(i)%p3%y+1.)*800/2.)        
-
-!teapot  
-! p1 = point((tarray(i)%p1%x+100.)*8/2., (tarray(i)%p1%y+60.)*8/2.)
-! p2 = point((tarray(i)%p2%x+100.)*8/2., (tarray(i)%p2%y+60.)*8/2.)
-! p3 = point((tarray(i)%p3%x+100.)*8/2., (tarray(i)%p3%y+60.)*8/2.)
-
-!gourd
-! p1 = point((tarray(i)%p1%x+3.)*400/2., (tarray(i)%p1%y+2.)*400/2.)
-! p2 = point((tarray(i)%p2%x+3.)*400/2., (tarray(i)%p2%y+2.)*400/2.)
-! p3 = point((tarray(i)%p3%x+3.)*400/2., (tarray(i)%p3%y+2.)*400/2.)

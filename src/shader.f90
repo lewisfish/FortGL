@@ -4,16 +4,52 @@ Module shaderclass
 
     implicit none
 
-    type :: shader
+    !abstract shader type
+    type, abstract :: shader
         real :: varying_intensity(3)
         Contains
-
-            procedure :: fragment => fragment_fn
-            procedure :: vertex   => vertex_fn
+            procedure(generic_frag), deferred, pass :: fragment
+            procedure(generic_vert), deferred, pass :: vertex
     end type shader
 
+
+    abstract interface
+        function generic_vert(this, vertex, i, j, light)
+            use triangleclass
+            use camera, only : viewport, projection, modelview, v2m, m2v
+            import :: shader
+            class(shader) :: this
+            type(triangle), intent(IN) :: vertex
+            integer,        intent(IN) :: i, j
+            type(vector),   intent(IN) :: light
+            real :: generic_vert(4,1)
+
+        end function generic_vert
+    end interface
+
+
+    abstract interface
+        logical function generic_frag(this, bar_c, colour)
+            use image, only : RGBA, operator(*)
+            use types, only: operator(.dot.), vector
+            import :: shader
+            class(shader) :: this
+            type(vector), intent(IN)    :: bar_c
+            type(RGBA),   intent(INOUT) :: colour
+        end function generic_frag
+    end interface
+
+
+    !default shader which is a gourand shader
+    type, extends(shader) :: gourand
+        Contains
+            procedure, pass(this) :: fragment => fragment_fn
+            procedure, pass(this) :: vertex => vertex_fn
+    end type gourand
+
+
     private :: fragment_fn, vertex_fn
-    public :: shader
+    public :: shader, gourand
 
     Contains
 
@@ -24,10 +60,10 @@ Module shaderclass
 
         implicit none
 
-        class(shader) :: this
+        class(gourand) :: this
         type(vector), intent(IN)  :: bar_c
         type(vector) :: tmp
-        type(RGBA)  :: colour
+        type(RGBA),   intent(INOUT)  :: colour
 
         real :: intensity
 
@@ -47,7 +83,7 @@ Module shaderclass
 
         implicit none
 
-        class(shader)              :: this
+        class(gourand)              :: this
         type(triangle), intent(IN) :: vertex
         integer,        intent(IN) :: i, j
         type(vector),   intent(IN) :: light

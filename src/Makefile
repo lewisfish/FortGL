@@ -1,19 +1,12 @@
-FCOMP = gfortran
-FCFLAGS = -O2 -freal-4-real-8
+ifeq ($(FCOMP),mpifort)
+FCFLAGS = -O2 -cpp -freal-4-real-8 -march=native -ftree-vectorize -flto -mavx -ffast-math -funroll-loops
 FCDEBUG = -g -fbacktrace -fcheck=all -fbounds-check -ffpe-trap=invalid,overflow,underflow,denormal
-FCBUILD = -Wall -Wextra -pedantic -std=f2008
-
-#intel flags
-# FCOMP = ifort
-# FCFLAGS = -O2 -r8 -xHOST
-# FCDEBUG = -g -traceback -CB -CU -CA -check:all -fp-trap-all=divzero,invalid,overflow,underflow,denormal
-# FCBUILD = -warn -stand f08
-
-#pgi flags
-# FCOMP = pgfortran
-# FCFLAGS = -fast -r8
-# FCDEBUG = -g -Mbounds -traceback
-# FCBUILD = 
+FCBUILD = -Wall -Wextra -pedantic
+else ifeq ($(FCOMP),mpiifort)
+FCFLAGS = -O2 -r8 -xHOST -ipo
+FCDEBUG = -g -debug -traceback -check all -CB -CU -CA -fpe0 -debug
+FCBUILD = -warn all -stand f08
+endif
 
 PROGRAM =  fortgl
 

@@ -689,9 +689,9 @@ Contains
       type(RGBimage), intent(OUT) :: img
       character(*),   intent(IN)  :: filename, format
       
-      call system('convert '//filename//format//' '//filename//'.ppm')
+      call execute_command_line('convert '//filename//format//' '//filename//'.ppm')
       call read_ppm(filename//'.ppm', img)
-      call system('rm '//filename//'.ppm')
+      call execute_command_line('rm '//filename//'.ppm')
    
    end subroutine open_imageRGB
 
@@ -703,9 +703,9 @@ Contains
       type(RGBAimage), intent(OUT) :: img
       character(*),   intent(IN)  :: filename, format
       
-      call system('convert '//filename//format//' '//filename//'.ppm')
+      call execute_command_line('convert '//filename//format//' '//filename//'.ppm')
       call read_ppm(filename//'.ppm', img)
-      call system('rm '//filename//'.ppm')
+      call execute_command_line('rm '//filename//'.ppm')
    
    end subroutine open_imageRGBA
 
@@ -719,8 +719,8 @@ Contains
       
       print*,'Saved image as: ',filename//format
       call write_ppm(filename//'.ppm', img, 'P6')
-      call system('convert '//filename//'.ppm '//filename//format)
-      call system('rm '//filename//'.ppm')
+      call execute_command_line('convert '//filename//'.ppm '//filename//format)
+      call execute_command_line('rm '//filename//'.ppm')
    
    end subroutine save_imageRGB
 
@@ -734,8 +734,8 @@ Contains
       
       print*,'Saved image at: ',filename//format
       call write_ppm(filename//'.ppm', img, 'P6')
-      call system('convert '//filename//'.ppm '//filename//format)
-      call system('rm '//filename//'.ppm')
+      call execute_command_line('convert '//filename//'.ppm '//filename//format)
+      call execute_command_line('rm '//filename//'.ppm')
    
    end subroutine save_imageRGBA
 end module image
