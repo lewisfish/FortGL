@@ -82,7 +82,7 @@ program openFl
     use ply_reader,      only : read_ply
     use triangleclass,   only : triangle
     use camera
-    use userdef, only : toon
+    use userdef, only : toon, tmap
 
     use types
 
@@ -90,7 +90,7 @@ program openFl
 
     !array of triangles
     type(triangle), allocatable :: tarray(:)
-    type(gourand)               :: ishader
+    type(tmap)               :: ishader
 
     type(RGBAimage)     :: img, zbuf, texture
     type(RGBA)          :: colour
@@ -137,7 +137,9 @@ program openFl
     else
         call read_obj(trim(arg), tarray, texture)
     end if
-        
+    
+    ishader%texture = texture
+
     !do render
     call cpu_time(start)
     do i = 1, size(tarray)

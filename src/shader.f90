@@ -1,6 +1,7 @@
 Module shaderclass
 
     use types, only : vector
+    use image, only : RGBAimage
 
     implicit none
 
@@ -43,17 +44,30 @@ Module shaderclass
     !default shader which is a gourand shader
     type, extends(shader) :: gourand
         Contains
-            procedure, pass(this) :: fragment => fragment_fn
-            procedure, pass(this) :: vertex => vertex_fn
+            procedure, pass(this) :: fragment => fragment_gourand
+            procedure, pass(this) :: vertex => vertex_gourand
     end type gourand
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-    private :: fragment_fn, vertex_fn
-    public :: shader, gourand
+    !shader which is a texture mapped shader
+    type, extends(shader) :: tmap
+        type(vector)    :: varying_uv(3)
+        type(RGBAimage) :: texture
+        Contains
+            procedure, pass(this) :: fragment => fragment_tmap
+            procedure, pass(this) :: vertex => vertex_tmap
+    end type tmap
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    private :: fragment_gourand, vertex_gourand, fragment_tmap, vertex_tmap
+    public :: shader, gourand, tmap
 
     Contains
-
-    logical function fragment_fn(this, bar_c, colour)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    logical function fragment_gourand(this, bar_c, colour)
 
         use image, only : RGBA, operator(*)
         use types, only: operator(.dot.)
@@ -61,22 +75,22 @@ Module shaderclass
         implicit none
 
         class(gourand) :: this
-        type(vector), intent(IN)  :: bar_c
-        type(vector) :: tmp
-        type(RGBA),   intent(INOUT)  :: colour
+        type(vector), intent(IN)    :: bar_c
+        type(RGBA),   intent(INOUT) :: colour
 
+        type(vector) :: tmp
         real :: intensity
 
         tmp = vector(this%varying_intensity(1), this%varying_intensity(2), this%varying_intensity(3))
 
         intensity = tmp .dot. bar_c
         colour = RGBA(255,255,255,255) * intensity
-        fragment_fn = .false.
+        fragment_gourand = .false.
         
-    end function fragment_fn
+    end function fragment_gourand
 
 
-    function vertex_fn(this, vertex, i, j, light)
+    function vertex_gourand(this, vertex, i, j, light)
 
         use triangleclass
         use camera, only : viewport, projection, modelview, v2m, m2v
@@ -87,10 +101,57 @@ Module shaderclass
         type(triangle), intent(IN) :: vertex
         integer,        intent(IN) :: i, j
         type(vector),   intent(IN) :: light
-        real :: gl_vertex(4,1), vertex_fn(4,1)
+        real :: gl_vertex(4,1), vertex_gourand(4,1)
 
         this%varying_intensity(j) = max(0., (vertex%norms(j) .dot. light))
         gl_vertex = v2m(vertex%vert(j))
-        vertex_fn = matmul(matmul(matmul(viewport,projection),modelview),gl_vertex)
-    end function vertex_fn
+        vertex_gourand = matmul(matmul(matmul(viewport,projection),modelview),gl_vertex)
+    end function vertex_gourand
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    logical function fragment_tmap(this, bar_c, colour)
+
+        use image, only : RGBA, operator(*), get_pixel
+        use types, only: operator(.dot.), operator(*), operator(+)
+
+        implicit none
+
+        class(tmap) :: this
+        type(vector), intent(IN)    :: bar_c
+        type(RGBA),   intent(INOUT) :: colour
+
+        type(vector) :: tmp, uv
+        real :: intensity
+
+        tmp = vector(this%varying_intensity(1), this%varying_intensity(2), this%varying_intensity(3))
+
+        intensity = tmp .dot. bar_c
+        uv = this%varying_uv(1)*bar_c%x + this%varying_uv(2)*bar_c%y + this%varying_uv(3)*bar_c%z
+        call get_pixel(this%texture, int(uv%x*this%texture%width), int(uv%y*this%texture%height), colour)
+        colour = colour * intensity
+        fragment_tmap = .false.
+        
+    end function fragment_tmap
+
+
+    function vertex_tmap(this, vertex, i, j, light)
+
+        use triangleclass
+        use camera, only : viewport, projection, modelview, v2m, m2v
+
+        implicit none
+
+        class(tmap)              :: this
+        type(triangle), intent(IN) :: vertex
+        integer,        intent(IN) :: i, j
+        type(vector),   intent(IN) :: light
+        real :: gl_vertex(4,1), vertex_tmap(4,1)
+
+        this%varying_uv(j) = vertex%uvs(j)
+
+        this%varying_intensity(j) = max(0., (vertex%norms(j) .dot. light))
+        gl_vertex = v2m(vertex%vert(j))
+        vertex_tmap = matmul(matmul(matmul(viewport,projection),modelview),gl_vertex)
+    end function vertex_tmap
 end Module shaderclass
