@@ -100,7 +100,6 @@ Module Image
       module procedure RGBAimageequal
    end interface
    
-
    private
    public :: operator(+), assignment(=), operator(*), operator(.dist.), operator(==), operator(/=)
    public :: save_image, open_image, write_ppm, read_ppm, flip, clampInt

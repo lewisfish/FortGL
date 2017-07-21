@@ -24,7 +24,9 @@ SRCS =		utils.f90 \
 			triangle.f90 \
 			plyread.f90 \
 			objread.f90 \
-			Draw_mod.f90 \
+			camera.f90 \
+			shader.f90 \
+			render.f90 \
 			main.f90 
                     
 OBJECTS = $(SRCS:.f90=.o)
