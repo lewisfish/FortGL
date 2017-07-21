@@ -2,14 +2,16 @@
 
 3D software rendering in pure Fortran.
 
-![alt text](https://raw.githubusercontent.com/lewisfish/FortGL/master/output.png "Wireframe head")
+![alt text](https://raw.githubusercontent.com/lewisfish/FortGL/master/output.png "Texture mapped head")
 
 ## Features so far...
    * Reads .obj and simple .ply file formats
    * Bresenham's line algorithm
    * Rasterisation of triangles
-   * Wireframe render of triangles
-   * Texture mapping
+   * User defined shaders
+   * Movable camera and perspective view
+   * ~~Wireframe render of triangles~~ currently broken
+   * ~~Texture mapping~~ not implmented anymore
    * Native output in ppm (with any format available through imagemagick)
 
 
@@ -18,7 +20,7 @@
 
 
 
-![alt text](https://raw.githubusercontent.com/lewisfish/FortGL/master/teapot.png "Wireframe teapot")
+![alt text](https://raw.githubusercontent.com/lewisfish/FortGL/master/outputtoon.png "Example shader")
 
 ## Requirements
   * Only tested on:
@@ -29,7 +31,7 @@
   * Ubuntu 16.04 LTS
 
 ## ToDo
-  * make more oop style
-  * shaders
+  * re implment wire render and texture mapping
+  * normal mapping
   * fix .obj for more than order 3 (i.e. more than just triangles)
   * more file formats (both model input and image output formats)
