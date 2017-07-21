@@ -16,120 +16,8 @@ module render
     
     private
     public :: draw_line, draw_triangle
-    public :: identity, m2v, v2m, lookat, view_init, proj
 
 contains
-
-    type(ivec) function m2v(m)
-
-        implicit none
-
-        real :: m(:,:)
-
-        m2v = ivec(int(m(1,1)/m(4,1)), int(m(2,1)/m(4,1)), int(m(3,1)/m(4,1)))
-
-    end function m2v
-
-    function v2m(v)
-
-        implicit none
-
-        real :: v2m(4,1)
-        type(vector), intent(IN) :: v
-
-        v2m(1,1) = v%x
-        v2m(2,1) = v%y
-        v2m(3,1) = v%z
-        v2m(4,1) = 1.
-
-    end function v2m
-
-
-    function identity(m)
-
-        implicit none
-
-        real, intent(INOUT) :: m(:,:)
-        real :: identity(size(m,1), size(m,2))
-
-        integer :: i, j
-
-        do i = 1, size(m,1)
-            do j = 1, size(m,2)
-                if(i == j)then
-                    m(i, j) = 1.
-                else
-                    m(i, j) = 0.
-                end if
-            end do
-        end do
-        identity = m
-    end function identity
-
-
-    function proj(coeff)
-
-        implicit none
-
-        real:: coeff
-        real :: proj(4,4)
-
-        proj = identity(proj)
-        proj(4,3) = coeff
-
-    end function proj
-
-
-    function view_init(x, y, w, h, depth)
-
-        implicit none
-
-        real :: view_init(4,4)
-        integer, intent(IN)  :: x, y, w, h, depth
-
-        view_init = identity(view_init)
-        view_init(1,4) = x + w/2.
-        view_init(2,4) = y + h/2.
-        view_init(3,4) = depth/2.
-
-        view_init(1,1) = w/2.
-        view_init(2,2) = h/2.
-        view_init(3,3) = depth/2.
-
-    end function view_init
-
-    function lookat(eye, centre, up)
-
-        implicit none
-
-        real :: lookat(4,4), minv(4,4)!,tr(4,4)
-        type(vector), intent(IN)  :: eye, centre,  up
-
-        type(vector) :: x, y, z
-        real :: tmpx(3),tmpy(3),tmpz(3),tmpc(3)
-        integer :: i
-
-        z = normal(eye-centre)
-        x = normal(up .cross. z)
-        y = normal(z .cross. x)
-        ! print*,'y',y
-
-        tmpx(1:3) = [x%x,x%y,x%z] 
-        tmpy(1:3) = [y%x,y%y,y%z] 
-        tmpz(1:3) = [z%x,z%y,z%z] 
-        tmpc(1:3) = [centre%x,centre%y,centre%z] 
-
-        minv = identity(minv)
-        ! tr = identity(tr)
-        do i = 1, 3
-            minv(1,i) = tmpx(i)![x%x,x%y,x%z]
-            minv(2,i) = tmpy(i)![y%x,y%y,y%z]
-            minv(3,i) = tmpz(i)![z%x,z%y,z%z]
-            minv(i,4) = -tmpc(i)![-centre%x,-centre%y,-centre%z]
-        end do
-        lookat = minv
-    end function lookat
-
 
     subroutine draw_lineRGB(img, p1, p2, colour)
 
@@ -276,29 +164,31 @@ contains
     end function barycentric
 
 
-    subroutine draw_triangleRGBA(img, pts, zbuffer, intensity, colour, texture, uvs, norms, light, wire)
-
+    ! subroutine draw_triangleRGBA(img, pts, zbuffer, intensity, colour, texture, uvs, norms, light, wire)
+    subroutine draw_triangleRGBA(img, ishader, zbuffer, pts, wire)
       use triangleclass
-
+      use shaderclass
       implicit none
 
       type(RGBAimage),           intent(INOUT) :: img
-      type(RGBAimage), optional, intent(IN)    :: texture
-      type(RGBA),      optional, intent(IN)    :: colour
+      type(shader) :: ishader
+      ! type(RGBAimage), optional, intent(IN)    :: texture
+      ! type(RGBA),      optional, intent(IN)    :: colour
       type(ivec),                intent(INOUT) :: pts(:)
-      type(vector),    optional, intent(IN)    :: uvs(:)
-      type(vector),    optional                :: norms(:), light
+      ! type(vector),    optional, intent(IN)    :: uvs(:)
+      ! type(vector),    optional                :: norms(:), light
       logical,         optional                :: wire
       real,                      intent(INOUT) :: zbuffer(:)
-      real,                      intent(INOUT) :: intensity
+      ! real,                      intent(INOUT) :: intensity
 
-      type(vector) :: uv, n
+      ! type(vector) :: uv, n
       type(RGBA)   :: c
 
       type(vector) :: tmp
       type(ivec)   :: p
       integer      :: bmin(2), bmax(2), clamp(2), i, j, k
-      real         :: bc_screen(3)
+      real         :: bc_screen(3), w, z, frag_depth
+      logical :: discard
 
       if(.not. present(wire))then
          bmin = [img%width, img%height-1]
@@ -320,39 +210,54 @@ contains
                p%y = j
                p%z = 0
 
-               tmp = barycentric(pts(1), pts(2), pts(3), p)
+               tmp = barycentric(pts(1)/pts(1)%z, pts(2)/pts(2)%z, pts(3)/pts(3)%z, p)
                bc_screen = [tmp%x, tmp%y, tmp%z]
+               z = pts(1)%y * tmp%x + pts(2)%y * tmp%y + pts(3)%y * tmp%z;
+               w = pts(1)%z * tmp%x + pts(2)%z * tmp%y + pts(3)%z * tmp%z;
+               frag_depth = max(0, min(255, int(z/w+.5)));
 
-               if(bc_screen(1) < 0. .or. bc_screen(2) < 0. .or. bc_screen(3) < 0.)cycle
-               do k = 1, 3
-                  p%z = p%z + int(pts(k)%z*bc_screen(k))
-               end do
-               if(p%x < 1 .or. p%y < 1)cycle
-               if(zbuffer(int(p%x + p%y * img%width)) < p%z)then
-                  zbuffer(int(p%x + p%y * img%width)) = p%z
-                  if(present(texture))then
-                     if(.not. present(uvs))error stop "Need uvs"
-                     !interpolate uv corrds
-                     uv = uvs(1)*tmp%x + uvs(2)*tmp%y + uvs(3)*tmp%z
-                     n = norms(1)*tmp%x + norms(2)*tmp%y + norms(3)*tmp%z
-                     n = normal(n)
-                     intensity = abs( n .dot. light)
-                     !get texture colour
-                     call get_pixel(texture, int(uv%x), int(uv%y), c)
-                     !add lighting
-                     ! c = rgbA(255,255,255,255)
-                     c = c * intensity
-                     call set_pixel(img, p%x, p%y, c)
-                  else
-                     !interpolate uv corrds
-                     n = norms(1)*tmp%x + norms(2)*tmp%y + norms(3)*tmp%z
-                     n = normal(n)
-                     intensity = abs( n .dot. light)
-                     c = rgbA(255,255,255,255)
-                     c = c * intensity
-                     call set_pixel(img, p%x, p%y, c)
-                  end if
-               end if
+               if(tmp%x < 0. .or. tmp%y < 0. .or. tmp%z < 0. &
+                  .or. zbuffer(int(p%x+p%y*img%width)) > frag_depth)cycle
+                discard = ishader%fragment(tmp, c)
+                if(.not. discard)then
+                    zbuffer(int(p%x + p%y * img%width)) = p%z
+                    call set_pixel(img, p%x, p%y, c)
+                end if
+
+
+
+
+
+               ! if(bc_screen(1) < 0. .or. bc_screen(2) < 0. .or. bc_screen(3) < 0.)cycle
+               ! do k = 1, 3
+               !    p%z = p%z + int(pts(k)%z*bc_screen(k))
+               ! end do
+               ! if(p%x < 1 .or. p%y < 1)cycle
+               ! if(zbuffer(int(p%x + p%y * img%width)) < p%z)then
+               !    zbuffer(int(p%x + p%y * img%width)) = p%z
+               !    if(present(texture))then
+               !       if(.not. present(uvs))error stop "Need uvs"
+               !       !interpolate uv corrds
+               !       uv = uvs(1)*tmp%x + uvs(2)*tmp%y + uvs(3)*tmp%z
+               !       n = norms(1)*tmp%x + norms(2)*tmp%y + norms(3)*tmp%z
+               !       n = normal(n)
+               !       intensity = abs( n .dot. light)
+               !       !get texture colour
+               !       call get_pixel(texture, int(uv%x), int(uv%y), c)
+               !       !add lighting
+               !       ! c = rgbA(255,255,255,255)
+               !       c = c * intensity
+               !       call set_pixel(img, p%x, p%y, c)
+               !    else
+               !       !interpolate uv corrds
+               !       n = norms(1)*tmp%x + norms(2)*tmp%y + norms(3)*tmp%z
+               !       n = normal(n)
+               !       intensity = abs( n .dot. light)
+               !       c = rgbA(255,255,255,255)
+               !       c = c * intensity
+               !       call set_pixel(img, p%x, p%y, c)
+               !    end if
+               ! end if
             end do
          end do
       else

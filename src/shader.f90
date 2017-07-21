@@ -4,58 +4,61 @@ Module shaderclass
 
     implicit none
 
-    type, abstract :: shader
+    type :: shader
+        real :: varying_intensity(3)
+        Contains
 
-    type(vector) :: varying_intensity
-
-    Contains
-
-    procedure :: fragment => fragment_sub
-    procedure :: vertex   => vertex_sub
-
+            procedure :: fragment => fragment_fn
+            procedure :: vertex   => vertex_fn
     end type shader
 
-    private :: fragment_sub, vertex_sub
+    private :: fragment_fn, vertex_fn
+    public :: shader
 
     Contains
 
-    subroutine fragment_sub(this, bar_c, colour, flag)
+    logical function fragment_fn(this, bar_c, colour)
 
-        use image, only : RGBA
+        use image, only : RGBA, operator(*)
+        use types, only: operator(.dot.)
 
         implicit none
 
         class(shader) :: this
         type(vector), intent(IN)  :: bar_c
-        type(RGBA),   intent(IN)  :: colour
-        logical,      intent(OUT) :: flag
+        type(vector) :: tmp
+        type(RGBA)  :: colour
 
         real :: intensity
 
-        intensity = this%varying_intensity .dot. bar_c
+        tmp = vector(this%varying_intensity(1), this%varying_intensity(2), this%varying_intensity(3))
+
+        intensity = tmp .dot. bar_c
         colour = RGBA(255,255,255,255) * intensity
-        flag = .false.
+
+        fragment_fn = .false.
         
-    end subroutine fragment_sub
+    end function fragment_fn
 
 
-    subroutine vertex_sub(this, vertex, i, j, light)
+    function vertex_fn(this, vertex, i, j, light)
 
         use triangleclass
+        use camera, only : viewport, projection, modelview, v2m, m2v
 
         implicit none
 
-        class(shader)       :: this
+        class(shader)              :: this
         type(triangle), intent(IN) :: vertex
-        integer, intent(IN) :: i, j
-        type(vector) :: light, gl_vertex
+        integer,        intent(IN) :: i, j
+        type(vector),   intent(IN) :: light
+        type(ivec)                 :: vertex_fn
+        real :: gl_vertex(4,1)
 
-        this%varying_intensity%x = vertex%norms(j) .dot. light
-        gl_vertex = v2m(vertex%vert)
+        this%varying_intensity(j) = max(0., (vertex%norms(j) .dot. light))
+        gl_vertex = v2m(vertex%vert(j))
         
-        screenCoor = matmul(matmul(matmul(viewport,projection),modelview),gl_vertex)
-
-    end subroutine vertex_sub
-
-
+        vertex_fn = m2v(matmul(matmul(matmul(viewport,projection),modelview),gl_vertex))
+        
+    end function vertex_fn
 end Module shaderclass

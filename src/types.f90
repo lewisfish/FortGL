@@ -37,6 +37,13 @@ module types
         module procedure colourmultiplyvector
     end interface
 
+    interface operator (/)
+        module procedure vecdivA
+        module procedure ivecdivA
+        module procedure vecdivB
+        module procedure ivecDivAI
+    end interface
+
     interface operator (+)
         module procedure vecAdd
         module procedure ivecAdd
@@ -60,7 +67,7 @@ module types
 
     private
     public :: vector, ivec, point
-    public :: operator(.dot.), operator(.cross.), operator(-), operator(*), operator(+)
+    public :: operator(.dot.), operator(.cross.), operator(-), operator(*), operator(+), operator(/)
     public :: magnitude, normal, swap
 
     contains
@@ -111,6 +118,7 @@ module types
 
         end function pointmultscal
 
+
         function colourmultiplyvector(b, a)
 
             type(RGB),    intent(IN) :: a
@@ -133,7 +141,8 @@ module types
 
         end function vecMulA
 
-            type(ivec) function ivecMulA(a, b)
+
+        type(ivec) function ivecMulA(a, b)
 
             implicit none
 
@@ -155,6 +164,54 @@ module types
             vecMulB = vector(a * b%x, a * b%y, a * b%z)
 
         end function vecMulB
+
+
+        type(vector) function vecDivA(a, b)
+
+            implicit none
+
+            type(vector), intent(IN) :: a
+            real,         intent(IN) :: b
+
+            vecDivA = vector(a%x / b, a%y / b, a%z / b)
+
+        end function vecDivA
+
+
+        type(ivec) function ivecDivA(a, b)
+
+            implicit none
+
+            type(ivec), intent(IN) :: a
+            real,         intent(IN) :: b
+
+            ivecDivA = ivec(int(a%x / b), int(a%y / b), int(a%z / b))
+
+        end function ivecDivA
+
+
+        type(ivec) function ivecDivAI(a, b)
+
+            implicit none
+
+            type(ivec), intent(IN) :: a
+            integer,    intent(IN) :: b
+
+            ivecDivAI = ivec(a%x / b, a%y / b, a%z / b)
+
+        end function ivecDivAI
+
+
+        type(vector) function vecDivB(a, b)
+
+            implicit none
+
+            type(vector), intent(IN) :: b
+            real,         intent(IN) :: a
+
+            vecDivB = vector(a / b%x, a / b%y, a / b%z)
+
+        end function vecDivB
 
 
         type(vector) function vecSub(a, b)
@@ -206,7 +263,6 @@ module types
             implicit none
 
             type(vector), intent(IN) :: a, b
-
             vecDot = (a%x * b%x) + (a%y * b%y) + (a%z * b%z)
 
         end function vecDot

@@ -3,16 +3,18 @@ program openFl
     use Image,           only : save_image, flip, RGBAimage, RGBA
     use render
     use utils,           only : str
-
+    use shaderclass
     use obj_reader
     use ply_reader
     use triangleclass
+    use camera
     use types
 
     implicit none
 
     !array of triangles
     type(triangle), allocatable :: tarray(:)
+    type(shader) :: ishader
 
     type(RGBAimage)     :: img, zbuf, texture
     type(RGBA)          :: colour
@@ -22,8 +24,6 @@ program openFl
     integer             :: i, j, height, width, depth, idx, k
     real                :: intensity, finish, start
     real, allocatable   :: zbuffer(:)
-    real                :: projection(4,4), viewport(4,4), modelview(4,4)
-
 
     call get_environment_variable('PWD',pwd)
     pwd = pwd(:len(trim(pwd))-3)
@@ -66,24 +66,34 @@ program openFl
     call cpu_time(start)
     do i = 1, size(tarray)
         do j = 1, 3
-            v = tarray(i)%vert(j)
-            screenCoor(j) = m2v(matmul(matmul(matmul(viewport,projection),modelview),v2m(v)))
-            worldCoor(j) = v  
+            screenCoor(j) = ishader%vertex(tarray(i), i, j, light_dir)
         end do
-
-        !get uv coords
-        do k = 1, 3
-            uv(k) = tarray(i)%uvs(k)
-            norm(k) = tarray(i)%norms(k)
-        end do
-
-        !adjust to size of texture
-        uv(:)%x = uv(:)%x*texture%width
-        uv(:)%y = uv(:)%y*texture%height
-!                                              o       o       o    o      o      o
-        !(img, pts, zbuffer, intensity, colour, texture, uvs, norms, light, wire)
-        call draw_triangle(img, screenCoor(:), zbuffer(:), intensity,wire=.true.)! uvs=uv, norms=norm, light=light_dir, texture=texture)
+        call draw_triangle(img, ishader, zbuffer, screenCoor)
     end do
+
+
+
+
+
+!         do j = 1, 3
+!             v = tarray(i)%vert(j)
+!             screenCoor(j) = m2v(matmul(matmul(matmul(viewport,projection),modelview),v2m(v)))
+!             worldCoor(j) = v  
+!         end do
+
+!         !get uv coords
+!         do k = 1, 3
+!             uv(k) = tarray(i)%uvs(k)
+!             norm(k) = tarray(i)%norms(k)
+!         end do
+
+!         !adjust to size of texture
+!         uv(:)%x = uv(:)%x*texture%width
+!         uv(:)%y = uv(:)%y*texture%height
+! !                                              o       o       o    o      o      o
+!         !(img, pts, zbuffer, intensity, colour, texture, uvs, norms, light, wire)
+!         call draw_triangle(img, screenCoor(:), zbuffer(:), intensity,wire=.true.)! uvs=uv, norms=norm, light=light_dir, texture=texture)
+    ! end do
 
     print*,
     call cpu_time(finish)
