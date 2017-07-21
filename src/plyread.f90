@@ -62,7 +62,7 @@ Module ply_reader
 
             open(newunit=u,file=filename,iostat=io)
 
-            if(io /= 0)error stop "Can't open file in ply_reader"
+            if(io /= 0)stop "Can't open file in ply_reader"
 
             i = 1
             do
@@ -72,8 +72,8 @@ Module ply_reader
                 line = adjustl(line)
 
                 !check if ply file
-                if(i == 1 .and. verify(adjustl(line(1:3)), 'ply') /= 0)error stop 'not valid ply file'
-                if(i == 2 .and. verify(adjustl(line(8:12)), 'ascii') /= 0)error stop "Binary .ply files not supported"
+                if(i == 1 .and. verify(adjustl(line(1:3)), 'ply') /= 0)stop 'not valid ply file'
+                if(i == 2 .and. verify(adjustl(line(8:12)), 'ascii') /= 0)stop "Binary .ply files not supported"
 
                 !ignore comments
                 if(verify(line(1:7), "comment") == 0)then

@@ -10,19 +10,19 @@ module triangleclass
 
         contains
         
-        procedure :: info => info_fn
+        ! procedure :: info => info_fn
     end type triangle
 
-    private :: info_fn
+    ! private :: info_fn
 
     contains
 
-    subroutine info_fn(this)
+    ! subroutine info_fn(this)
 
-        class(triangle), intent(IN) :: this
+    !     class(triangle), intent(IN) :: this
 
-        print*,'triangle', this%vert(:)
+    !     print*,'triangle', this%vert(:)
 
-    end subroutine info_fn
+    ! end subroutine info_fn
 
 end module triangleclass

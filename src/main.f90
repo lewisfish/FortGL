@@ -89,14 +89,14 @@ program openFl
             uv(:)%y = uv(:)%y*texture%height
 !                                              o       o       o    o      o      o
             !(img, pts, zbuffer, intensity, colour, texture, uvs, norms, light, wire)
-            call draw_triangle(img, screenCoor(:), zbuffer(:), intensity, wire=.true.)!uvs=uv, norms=norm, light=light_dir, texture=texture)
+            call draw_triangle(img, screenCoor(:), zbuffer(:), intensity, uvs=uv, norms=norm, light=light_dir, texture=texture)
         end if
     end do
 
-    print*,
+    print*,''
     call cpu_time(finish)
-    print*,"Render took: "//str(finish-start,5)//'s'
-    print*,
+    print*,"Render took: ",str(finish-start,5),'s'
+    print*,''
 
     !flip image
     call flip(img)
@@ -104,7 +104,7 @@ program openFl
     call save_image(img, trim(pwd)//"data/output", '.png')
 
     !asynchronously display image if supported, if not do it synchronously 
-    call execute_command_line("eog "//trim(pwd)//"data/output.png", wait=.false.)
+    call execute_command_line("eog "//trim(pwd)//"data/output.png")
 
     !debug zbuffer
     do i =1, width-1

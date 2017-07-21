@@ -200,7 +200,7 @@ module types
             real :: mag
 
             mag = magnitude(this)
-            if(mag == 0.)error stop "magnitude = 0"
+            if(mag == 0.)stop "magnitude = 0"
             normal = vector(this%x/mag, this%y/mag, this%z/mag)
 
         end function normal

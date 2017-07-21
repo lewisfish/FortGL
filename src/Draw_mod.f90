@@ -660,7 +660,7 @@ Contains
                if(zbuffer(int(p%x + p%y * img%width)) < p%z)then
                   zbuffer(int(p%x + p%y * img%width)) = p%z
                   if(present(texture))then
-                     if(.not. present(uvs))error stop "Need uvs"
+                     if(.not. present(uvs))stop "Need uvs"
                      !interpolate uv corrds
                      uv = uvs(1)*tmp%x + uvs(2)*tmp%y + uvs(3)*tmp%z
                      n = norms(1)*tmp%x + norms(2)*tmp%y + norms(3)*tmp%z
@@ -691,7 +691,7 @@ Contains
             call draw_line(img, point(pts(2)%x, pts(2)%y), point(pts(3)%x, pts(3)%y), RGBA(255,255,255,255))
             call draw_line(img, point(pts(3)%x, pts(3)%y), point(pts(1)%x, pts(1)%y), RGBA(255,255,255,255))
          else
-            error stop 1
+            stop 1
          end if
       end if
    end subroutine draw_triangleRGBA

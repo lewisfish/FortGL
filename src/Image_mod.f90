@@ -478,7 +478,7 @@ Contains
          end do
       else
          print*,'Mode not supported!'
-         error stop
+         stop
 !         do j = 1, img%height
 !            do i = 1, img%width
 !               read(56) img%red(i,j)
@@ -539,7 +539,7 @@ Contains
             end do
          else
             print*,'Mode not supported!'
-            error stop
+            stop
    !         do j = 1, img%height
    !            do i = 1, img%width
    !               read(56) img%red(i,j)
@@ -690,9 +690,9 @@ Contains
       type(RGBimage), intent(OUT) :: img
       character(*),   intent(IN)  :: filename, format
       
-      call execute_command_line('convert '//filename//format//' '//filename//'.ppm')
+      call system('convert '//filename//format//' '//filename//'.ppm')
       call read_ppm(filename//'.ppm', img)
-      call execute_command_line('rm '//filename//'.ppm')
+      call system('rm '//filename//'.ppm')
    
    end subroutine open_imageRGB
 
@@ -704,9 +704,9 @@ Contains
       type(RGBAimage), intent(OUT) :: img
       character(*),   intent(IN)  :: filename, format
       
-      call execute_command_line('convert '//filename//format//' '//filename//'.ppm')
+      call system('convert '//filename//format//' '//filename//'.ppm')
       call read_ppm(filename//'.ppm', img)
-      call execute_command_line('rm '//filename//'.ppm')
+      call system('rm '//filename//'.ppm')
    
    end subroutine open_imageRGBA
 
@@ -720,8 +720,8 @@ Contains
       
       print*,'Saved image as: ',filename//format
       call write_ppm(filename//'.ppm', img, 'P6')
-      call execute_command_line('convert '//filename//'.ppm '//filename//format)
-      call execute_command_line('rm '//filename//'.ppm')
+      call system('convert '//filename//'.ppm '//filename//format)
+      call system('rm '//filename//'.ppm')
    
    end subroutine save_imageRGB
 
@@ -735,8 +735,8 @@ Contains
       
       print*,'Saved image at: ',filename//format
       call write_ppm(filename//'.ppm', img, 'P6')
-      call execute_command_line('convert '//filename//'.ppm '//filename//format)
-      call execute_command_line('rm '//filename//'.ppm')
+      call system('convert '//filename//'.ppm '//filename//format)
+      call system('rm '//filename//'.ppm')
    
    end subroutine save_imageRGBA
 end module image

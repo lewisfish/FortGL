@@ -164,7 +164,7 @@ Module obj_reader
                     elseif(c == 2)then 
                         read(line,*)array(i)%x, array(i)%y, array(i)%z
                     else
-                        error stop 'Broken texture vert read...'
+                        stop 'Broken texture vert read...'
                     end if
                     i = i + 1
                 else
@@ -264,7 +264,7 @@ Module obj_reader
                                         array(i,1)%y, array(i,2)%y, &
                                         array(i,1)%z, array(i,2)%z
                         else
-                            error stop 'unknown format for faces...'
+                            stop 'unknown format for faces...'
                         end if
                         i = i + 1
                     else
