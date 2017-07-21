@@ -52,7 +52,7 @@ Module obj_reader
             call read_vert_normals(filename, narray)
 
             !fit mesh into bi-unit cube
-            ! call fit_mesh(varray)
+            call fit_mesh(varray)
 
             if(allocated(tarray))deallocate(tarray)
             allocate(tarray(faces))

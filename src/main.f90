@@ -77,12 +77,12 @@ program openFl
     use Image,           only : save_image, flip, RGBAimage, RGBA, init_image, alloc_image, set_pixel
     use render,          only : draw_triangle
     use utils,           only : str
-    use shaderclass,     only : gourand
+    use shaderclass,     only : gourand, wireframe, tmap
     use obj_reader,      only : read_obj
     use ply_reader,      only : read_ply
     use triangleclass,   only : triangle
     use camera
-    use userdef, only : toon, tmap
+    use userdef, only : toon
 
     use types
 
@@ -90,7 +90,7 @@ program openFl
 
     !array of triangles
     type(triangle), allocatable :: tarray(:)
-    type(tmap)               :: ishader
+    type(wireframe)               :: ishader
 
     type(RGBAimage)     :: img, zbuf, texture
     type(RGBA)          :: colour
@@ -138,7 +138,7 @@ program openFl
         call read_obj(trim(arg), tarray, texture)
     end if
     
-    ishader%texture = texture
+    ! ishader%texture = texture
 
     !do render
     call cpu_time(start)

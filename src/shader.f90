@@ -59,11 +59,20 @@ Module shaderclass
             procedure, pass(this) :: vertex => vertex_tmap
     end type tmap
 
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    private :: fragment_gourand, vertex_gourand, fragment_tmap, vertex_tmap
-    public :: shader, gourand, tmap
+
+    !shader which is a texture mapped shader
+    type, extends(shader) :: wireframe
+        real :: line_thickness = 0.025
+        Contains
+            procedure, pass(this) :: fragment => fragment_wire
+            procedure, pass(this) :: vertex => vertex_wire
+    end type wireframe
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    private :: fragment_gourand, vertex_gourand, fragment_tmap, vertex_tmap, fragment_wire, vertex_wire
+    public :: shader, gourand, tmap, wireframe
 
     Contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -154,4 +163,53 @@ Module shaderclass
         gl_vertex = v2m(vertex%vert(j))
         vertex_tmap = matmul(matmul(matmul(viewport,projection),modelview),gl_vertex)
     end function vertex_tmap
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    logical function fragment_wire(this, bar_c, colour)
+
+        use image, only : RGBA, operator(*), get_pixel
+        use types, only: operator(.dot.)
+
+        implicit none
+
+        class(wireframe) :: this
+        type(vector), intent(IN)    :: bar_c
+        type(RGBA),   intent(INOUT) :: colour
+
+        type(vector) :: tmp
+        real :: intensity
+        intensity = tmp .dot. bar_c
+
+        tmp = vector(this%varying_intensity(1), this%varying_intensity(2), this%varying_intensity(3))
+
+        if(abs(bar_c%x) < this%line_thickness .or. abs(bar_c%y) < this%line_thickness .or. abs(bar_c%z) < this%line_thickness)then
+            colour = RGBA(255,255,255,255)
+        else
+            colour = RGBA(0,0,0,255)
+        end if
+
+        ! colour = colour * intensity
+        fragment_wire = .false.
+        
+    end function fragment_wire
+
+
+    function vertex_wire(this, vertex, i, j, light)
+
+        use triangleclass
+        use camera, only : viewport, projection, modelview, v2m, m2v
+
+        implicit none
+
+        class(wireframe)              :: this
+        type(triangle), intent(IN) :: vertex
+        integer,        intent(IN) :: i, j
+        type(vector),   intent(IN) :: light
+        real :: gl_vertex(4,1), vertex_wire(4,1)
+
+
+        this%varying_intensity(j) = max(0., (vertex%norms(j) .dot. light))
+        gl_vertex = v2m(vertex%vert(j))
+        vertex_wire = matmul(matmul(matmul(viewport,projection),modelview),gl_vertex)
+    end function vertex_wire
 end Module shaderclass

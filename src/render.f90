@@ -164,7 +164,7 @@ contains
     end function barycentric
 
 
-    subroutine draw_triangleRGBA(img, ishader, zbuffer, pts)
+    subroutine draw_triangleRGBA(img, ishader, zbuffer, pts, wire)
 
         use triangleclass
         use shaderclass
@@ -172,10 +172,11 @@ contains
 
         implicit none
 
-        type(RGBAimage), intent(INOUT) :: img
-        real,            intent(INOUT) :: pts(:,:)
-        real,            intent(INOUT) :: zbuffer(:)
-        class(shader)                :: ishader
+        type(RGBAimage),   intent(INOUT) :: img
+        real,              intent(INOUT) :: pts(:,:)
+        real,              intent(INOUT) :: zbuffer(:)
+        class(shader)                    :: ishader
+        logical, optional, intent(IN)    :: wire
 
         type(RGBA)   :: colour
         type(vector) :: tmp, tmp1, tmp2, tmp3
@@ -184,23 +185,54 @@ contains
         real         :: w, z, frag_depth, bmin(2), bmax(2)
         logical      :: discard
 
-        bmin = [huge(1.), huge(1.)]
-        bmax = [-huge(1.), -huge(1.)]
 
-        !get bounding box for triangle
-        do i = 1, 3
-            do j = 1, 2
-                bmin(j) = min(bmin(j), pts(j,i)/pts(4,i))
-                bmax(j) = max(bmax(j), pts(j,i)/pts(4,i))
+        if(.not. present(wire))then
+
+            bmin = [huge(1.), huge(1.)]
+            bmax = [-huge(1.), -huge(1.)]
+
+            !get bounding box for triangle
+            do i = 1, 3
+                do j = 1, 2
+                    bmin(j) = min(bmin(j), pts(j,i)/pts(4,i))
+                    bmax(j) = max(bmax(j), pts(j,i)/pts(4,i))
+                end do
             end do
-        end do
 
-        do i = int(bmin(1)), int(bmax(1))
-            do j = int(bmin(2)), int(bmax(2))
-                p%x = i
-                p%y = j
-                p%z = 0
+            do i = int(bmin(1)), int(bmax(1))
+                do j = int(bmin(2)), int(bmax(2))
+                    p%x = i
+                    p%y = j
+                    p%z = 0
 
+                    !to clip coords
+                    pts(:,1) = pts(:,1)/pts(4,1)
+                    pts(:,2) = pts(:,2)/pts(4,2)
+                    pts(:,3) = pts(:,3)/pts(4,3)
+
+                    !convert to vector type
+                    tmp1 = vector(pts(1,1), pts(2,1), pts(3,1))
+                    tmp2 = vector(pts(1,2), pts(2,2), pts(3,2))
+                    tmp3 = vector(pts(1,3), pts(2,3), pts(3,3))
+
+                    !get barycentric coords
+                    tmp = barycentric(tmp1, tmp2, tmp3, vector(p%x,p%y,p%z))
+
+                    z = pts(3,1)*tmp%x + pts(3,2)*tmp%y + pts(3,3)*tmp%z
+                    w = pts(4,1)*tmp%x + pts(4,2)*tmp%y + pts(4,3)*tmp%z
+                    frag_depth = max(0, min(255, int(z/w+.5)))
+                    if(p%x > img%width-1 .or. p%y > img%height-1 .or. p%x < 0 .or. p%y < 0)cycle
+                    ! print*,p%x,p%y
+                    if(tmp%x <0 .or. tmp%y <0 .or. tmp%z <0 .or. zbuffer(int(p%x + p%y * img%width)) > frag_depth)cycle
+                    discard = ishader%fragment(tmp, colour)
+                    if(.not. discard)then
+                        zbuffer(int(p%x + p%y * img%width)) = frag_depth
+                        call set_pixel(img, p%x, p%y, colour)
+                    end if
+                end do
+            end do
+        else
+            if(wire)then
                 !to clip coords
                 pts(:,1) = pts(:,1)/pts(4,1)
                 pts(:,2) = pts(:,2)/pts(4,2)
@@ -211,26 +243,12 @@ contains
                 tmp2 = vector(pts(1,2), pts(2,2), pts(3,2))
                 tmp3 = vector(pts(1,3), pts(2,3), pts(3,3))
 
-                !get barycentric coords
-                tmp = barycentric(tmp1, tmp2, tmp3, vector(p%x,p%y,p%z))
-
-                z = pts(3,1)*tmp%x + pts(3,2)*tmp%y + pts(3,3)*tmp%z
-                w = pts(4,1)*tmp%x + pts(4,2)*tmp%y + pts(4,3)*tmp%z
-                frag_depth = max(0, min(255, int(z/w+.5)))
-                if(p%x > img%width-1 .or. p%y > img%height-1 .or. p%x < 0 .or. p%y < 0)cycle
-                ! print*,p%x,p%y
-                if(tmp%x <0 .or. tmp%y <0 .or. tmp%z <0 .or. zbuffer(int(p%x + p%y * img%width)) > frag_depth)cycle
-                discard = ishader%fragment(tmp, colour)
-                if(.not. discard)then
-                    zbuffer(int(p%x + p%y * img%width)) = frag_depth
-                    call set_pixel(img, p%x, p%y, colour)
-                end if
-            end do
-        end do
+                call draw_line(img, point(tmp1%x, tmp1%y), point(tmp2%x, tmp2%y), RGBA(255,255,255,255))
+                call draw_line(img, point(tmp2%x, tmp2%y), point(tmp3%x, tmp3%y), RGBA(255,255,255,255))
+                call draw_line(img, point(tmp3%x, tmp3%y), point(tmp1%x, tmp1%y), RGBA(255,255,255,255))
+            end if
+        end if
    end subroutine draw_triangleRGBA
 end module render
 
 !wireframe render
-! call draw_line(img, point(pts(1)%x, pts(1)%y), point(pts(2)%x, pts(2)%y), RGBA(255,255,255,255))
-! call draw_line(img, point(pts(2)%x, pts(2)%y), point(pts(3)%x, pts(3)%y), RGBA(255,255,255,255))
-! call draw_line(img, point(pts(3)%x, pts(3)%y), point(pts(1)%x, pts(1)%y), RGBA(255,255,255,255))
