@@ -48,7 +48,7 @@ module userdef
             colour = RGBA(255,155,0,255) * intensity
         fragment_fn = .false.
 
-end function fragment_fn
+    end function fragment_fn
 
 
     function vertex_fn(this, vertex, i, j, light)
@@ -68,15 +68,16 @@ end function fragment_fn
         this%varying_intensity(j) = max(0., (vertex%norms(j) .dot. light))
         gl_vertex = v2m(vertex%vert(j))
         vertex_fn = matmul(matmul(matmul(viewport,projection),modelview),gl_vertex)
-end function vertex_fn
+    end function vertex_fn
 
 end module userdef
 
+
 program openFl
 
-    use Image,           only : save_image, flip, RGBAimage, RGBA, init_image, alloc_image, set_pixel
+    use Image,           only : save_image, flip, RGBAimage, RGBA, init_image, alloc_image, set_pixel,fill_img
     use render,          only : draw_triangle
-    use utils,           only : str
+    use utils,           only : str, replace
     use shaderclass,     only : gourand, wireframe, tmap
     use obj_reader,      only : read_obj
     use ply_reader,      only : read_ply
@@ -88,37 +89,57 @@ program openFl
 
     implicit none
 
+    type :: model
+        type(triangle), allocatable :: tarray(:)
+    end type
+
+    type :: models
+        type(model), allocatable :: container(:)
+    end type
+
     !array of triangles
+    type(models) :: meshes
     type(triangle), allocatable :: tarray(:)
-    type(wireframe)               :: ishader
+    type(tmap)                  :: ishader
 
     type(RGBAimage)     :: img, zbuf, texture
     type(RGBA)          :: colour
     type(vector)        :: light_dir, centre, eye
-    character(len=256)  :: arg, pwd
-    integer             :: i, j, height, width, depth, idx
-    real                :: finish, start, screenCoor(4,3), tmp(4,1)
+
+    character(len=256)  :: pwd
+    character(len=256), allocatable :: arg(:)
+
+    integer             :: i, j, height, width, depth, idx, n, k, p
+    real                :: finish, start, time, screenCoor(4,3), tmp(4,1)
     real, allocatable   :: zbuffer(:)
 
     call get_environment_variable('PWD',pwd)
-    pwd = pwd(:len(trim(pwd))-3)
+    pwd = pwd(:len(trim(pwd)))
 
     !get file name
-    call get_command_argument(1, arg)
+    n = command_argument_count()
+    allocate(arg(n))
+    allocate(meshes%container(n))
+    allocate(meshes%container(i)%tarray%texture(n))
+
+    do i = 1, n
+        call get_command_argument(i, arg(i))
+        !read mesh file and texture
+        if(index(arg(n), '.ply') > 0)then
+            call read_ply(trim(arg(i)), tarray)
+        else
+            call read_obj(trim(arg(i)), tarray, texture)
+        end if
+        allocate(meshes%container(i)%tarray(size(tarray)))
+        meshes%container(i)%tarray(:) = tarray(:)
+        meshes%container(i)%tarray%texture(i) = texture
+
+    end do
 
     !set image size
-    width = 800
+    width  = 800
     height = 800
-    depth = 255
-
-    light_dir = normal(vector(1.,1.,1.))
-    centre = vector(0., 0., 0.)
-    eye = vector(0., 0., 3.)
-    screenCoor = 0.
-
-    modelview = lookat(eye, centre, vector(0.,1.,0.))
-    projection = proj(-1./magnitude(eye-centre))
-    viewport = view_init(width/8, height/8, width*3/4, height*3/4, depth)
+    depth  = 255
 
     !setup imgage object
     call init_image(img)
@@ -129,40 +150,50 @@ program openFl
 
     allocate(zbuffer(width*height))
 
-    zbuffer = -huge(1.)
 
-    !read mesh file and texture
-    if(index(arg, '.ply') > 0)then
-        call read_ply(trim(arg), tarray)
-    else
-        call read_obj(trim(arg), tarray, texture)
-    end if
-    
-    ! ishader%texture = texture
+    do p = 1, 10
+       call fill_img(img, RGBA(0,0,0,255))
 
-    !do render
-    call cpu_time(start)
-    do i = 1, size(tarray)
-        do j = 1, 3
-           tmp= ishader%vertex(tarray(i), i, j, light_dir)
-           screenCoor(:,j) = tmp(:,1)
+        light_dir = normal(vector(1.,1.,1.))
+        centre = vector(0., 0., 0.)
+        eye = vector(real(p), 1., 3.)
+        screenCoor = 0.
+
+        modelview = lookat(eye, centre, vector(0.,1.,0.))
+        projection = proj(-1./magnitude(eye-centre))
+        viewport = view_init(width/8, height/8, width*3/4, height*3/4, depth)
+
+        zbuffer = -huge(1.)
+        time = 0.
+
+        ! do render
+        do k = 1, size(meshes%container)
+            call cpu_time(start)
+            ishader%texture = meshes%container(k)%tarray%texture
+            do i = 1, size(meshes%container(k)%tarray)
+                do j = 1, 3
+                   tmp = ishader%vertex(meshes%container(k)%tarray(i), i, j, light_dir)
+                   screenCoor(:,j) = tmp(:,1)
+                end do
+                call draw_triangle(img, ishader, zbuffer, screenCoor)
+            end do
+            call cpu_time(finish)
+            time = time + (finish-start)
+            ! deallocate(meshes%container(k)%tarray)
         end do
-        call draw_triangle(img, ishader, zbuffer, screenCoor)
+
+        print*,' '
+        print*,"Render took: ",str(time,5),'s'
+        print*,''
+
+        !flip image
+        call flip(img)
+        !save image
+        call save_image(img, trim(pwd)//"/data/output"//str(p), '.png')
+
+        !asynchronously display image if supported, if not do it synchronously 
+        ! call execute_command_line("eog "//trim(pwd)//"data/output"//str(p)//".png",wait=.false.)
     end do
-
-    print*,' '
-    call cpu_time(finish)
-    print*,"Render took: ",str(finish-start,5),'s'
-    print*,''
-
-    !flip image
-    call flip(img)
-    !save image
-    call save_image(img, trim(pwd)//"data/output", '.png')
-
-    !asynchronously display image if supported, if not do it synchronously 
-    call execute_command_line("eog "//trim(pwd)//"data/output.png")
-
     !debug zbuffer
     do i =1, width-1
         do j = 1, height-1
@@ -174,5 +205,5 @@ program openFl
     end do
 
     call flip(zbuf)
-    call save_image(zbuf, trim(pwd)//"data/zbuffer", '.png')
+    call save_image(zbuf, trim(pwd)//"/data/zbuffer", '.png')
 end program openFl
