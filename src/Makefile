@@ -1,8 +1,8 @@
-ifeq ($(FCOMP),mpifort)
+ifeq ($(FCOMP),gfortran)
 FCFLAGS = -O2 -cpp -freal-4-real-8 -march=native -ftree-vectorize -flto -mavx -ffast-math -funroll-loops
 FCDEBUG = -g -fbacktrace -fcheck=all -fbounds-check -ffpe-trap=invalid,overflow,underflow,denormal
 FCBUILD = -Wall -Wextra -pedantic
-else ifeq ($(FCOMP),mpiifort)
+else ifeq ($(FCOMP),ifort)
 FCFLAGS = -O2 -r8 -xHOST -ipo
 FCDEBUG = -g -debug -traceback -check all -CB -CU -CA -fpe0 -debug
 FCBUILD = -warn all -stand f08

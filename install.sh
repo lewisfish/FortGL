@@ -17,9 +17,9 @@ function showhelp
 function makebuild
 {
   if [ "$comp" = 'gnu' ];then
-      string="FCOMP=mpifort"
+      string="FCOMP=gfortran"
     elif [ "$comp" = 'intel' ];then
-      string="FCOMP=mpiifort"
+      string="FCOMP=ifort"
   fi
 
   if [ "$debug" = 1 ];then
@@ -77,7 +77,7 @@ function run
   echo $(pwd)
   mv fortgl "$bdirc" && echo " "&& echo "*****Install complete*****" && echo " "
 
-  # clear
+  clear
   cd ../bin
 
   if [ "$NUM_CORES" = "1" ]; then

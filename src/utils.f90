@@ -61,11 +61,34 @@ module utils
     end interface swap
 
     private
-    public :: str, swap, colour, mem_free
+    public :: str, swap, colour, mem_free, replace
     public :: bold, italic, underline, strikethrough, black, red, green, yellow, blue, magenta, cyan, white
     public :: black_b, red_b, green_b, yellow_b, blue_b, magenta_b, cyan_b, white_b
 
     contains
+
+        function replace(string, char, rechar, count)
+
+            implicit none
+
+            character(len=*)  :: string
+            character(len=1),  intent(IN)  :: char, rechar            
+            integer, optional, intent(OUT) :: count
+            character(len=:), allocatable  :: replace
+
+            integer :: pos
+
+            replace = string
+            if(present(count))count = 0
+            do
+                pos = scan(trim(replace), char)
+                if(pos == 0)exit
+                if(present(count))count = count + 1
+                replace(pos:pos) = rechar
+            end do
+
+        end function replace
+
 
         subroutine swap_I(a, b)
 

@@ -10,7 +10,7 @@ Module obj_reader
 
     Contains
 
-        subroutine read_obj(filename, tarray, texture)
+        subroutine read_obj(filename, tarray, texture, fit)
 
             use Image
 
@@ -19,6 +19,7 @@ Module obj_reader
             type(RGBAimage),             intent(INOUT) :: texture
             character(*),                intent(IN)    :: filename
             type(triangle), allocatable, intent(INOUT) :: tarray(:)
+            logical,        optional,    intent(IN)    :: fit
 
             type(vector), allocatable :: varray(:), textarray(:), narray(:)
             type(ivec),   allocatable :: farray(:,:)
@@ -52,7 +53,11 @@ Module obj_reader
             call read_vert_normals(filename, narray)
 
             !fit mesh into bi-unit cube
-            call fit_mesh(varray)
+            if(present(fit))then
+                if(fit)then
+                    call fit_mesh(varray)
+                end if
+            end if
 
             if(allocated(tarray))deallocate(tarray)
             allocate(tarray(faces))
@@ -61,6 +66,7 @@ Module obj_reader
 
             if(texts > 0)then
                 call open_image(texture, filename(:len(filename)-4)//'_diffuse', '.tga')
+                print*,'Read: ',filename(:len(filename)-4)//'_diffuse.tga'
                 call flip(texture)
             end if
         end subroutine read_obj
@@ -244,8 +250,7 @@ Module obj_reader
                             line(pos:pos) = ' '
                         end do
                         line = trim(line(3:))
-                        ! print*,c,trim(line)
-                        ! stop
+
                         if(c == 6)then
                             if(flag)then
                                 !case where format is #//# #//# #//#
