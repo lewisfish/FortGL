@@ -7,8 +7,6 @@ module triangleclass
 
     type, extends(shape) :: triangle
         type(vector) :: vert(3), uvs(3), norms(3)
-        type(RGBAImage), allocatable :: texture(:)
-
         contains
         
         ! procedure :: info => info_fn

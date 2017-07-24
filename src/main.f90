@@ -91,6 +91,7 @@ program openFl
 
     type :: model
         type(triangle), allocatable :: tarray(:)
+        type(RGBAImage) :: texture
     end type
 
     type :: models
@@ -120,7 +121,6 @@ program openFl
     n = command_argument_count()
     allocate(arg(n))
     allocate(meshes%container(n))
-    allocate(meshes%container(i)%tarray%texture(n))
 
     do i = 1, n
         call get_command_argument(i, arg(i))
@@ -132,8 +132,7 @@ program openFl
         end if
         allocate(meshes%container(i)%tarray(size(tarray)))
         meshes%container(i)%tarray(:) = tarray(:)
-        meshes%container(i)%tarray%texture(i) = texture
-
+        meshes%container(i)%texture = texture
     end do
 
     !set image size
@@ -156,7 +155,7 @@ program openFl
 
         light_dir = normal(vector(1.,1.,1.))
         centre = vector(0., 0., 0.)
-        eye = vector(real(p), 1., 3.)
+        eye = vector(1., 1., real(p))
         screenCoor = 0.
 
         modelview = lookat(eye, centre, vector(0.,1.,0.))
@@ -169,7 +168,7 @@ program openFl
         ! do render
         do k = 1, size(meshes%container)
             call cpu_time(start)
-            ishader%texture = meshes%container(k)%tarray%texture
+            ishader%texture = meshes%container(k)%texture
             do i = 1, size(meshes%container(k)%tarray)
                 do j = 1, 3
                    tmp = ishader%vertex(meshes%container(k)%tarray(i), i, j, light_dir)
@@ -194,16 +193,4 @@ program openFl
         !asynchronously display image if supported, if not do it synchronously 
         ! call execute_command_line("eog "//trim(pwd)//"data/output"//str(p)//".png",wait=.false.)
     end do
-    !debug zbuffer
-    do i =1, width-1
-        do j = 1, height-1
-            idx = i+j*width
-            if(zbuffer(idx) < 0)zbuffer(idx)=0
-            colour = rgba(int(zbuffer(idx)), int(zbuffer(idx)), int(zbuffer(idx)), 255)
-            call set_pixel(zbuf, i, j, colour)
-        end do
-    end do
-
-    call flip(zbuf)
-    call save_image(zbuf, trim(pwd)//"/data/zbuffer", '.png')
 end program openFl
