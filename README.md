@@ -16,11 +16,11 @@
 
 
 
-![alt text](https://raw.githubusercontent.com/lewisfish/FortGL/master/gourd.png "Wireframe gourd")
+![alt text](https://raw.githubusercontent.com/lewisfish/FortGL/master/output-multi-mesh.png "Multiple meshes and textures")
 
 
 
-![alt text](https://raw.githubusercontent.com/lewisfish/FortGL/master/outputtoon.png "Example shader")
+![alt text](https://raw.githubusercontent.com/lewisfish/FortGL/master/outputtoon.png "Example toon shader")
 
 ## Requirements
   * Only tested on:
