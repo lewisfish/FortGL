@@ -63,7 +63,7 @@ Module shaderclass
 
     !shader which is a texture mapped shader
     type, extends(shader) :: wireframe
-        real :: line_thickness = 0.005
+        real :: line_thickness = 0.0025
         type(vector) :: altitudes
         Contains
             procedure, pass(this) :: fragment => fragment_wire
@@ -183,21 +183,23 @@ Module shaderclass
         type(RGBA),   intent(INOUT) :: colour
 
         type(vector) :: tmp
-        real :: intensity, d
-        intensity = tmp .dot. bar_c
-        fragment_wire = .false.
+        real         :: eintensity, d, intensity
 
         tmp = bar_c%x * vector(this%altitudes%x,0.,0.) + bar_c%y * vector(0.,this%altitudes%y,0.) + &
               bar_c%z * vector(0.,0.,this%altitudes%z) 
 
         d = min(tmp%x,tmp%y,tmp%z)
         if(d > this%line_thickness)then
-            colour = RGBA(255,0,0,255)
+            tmp = vector(this%varying_intensity(1), this%varying_intensity(2), this%varying_intensity(3))
+            intensity = abs(tmp .dot. bar_c)
+            colour = RGBA(255,0,0,255) * intensity
         else
-            intensity = 2.**(-2.*d*d)
-            colour =  RGBA(25,25,25,255) *(intensity*255) + RGBA(255,0,0,255) * ((1.-intensity)*255)
+            eintensity = 2.**(-2.*d*d)
+            colour =  RGBA((eintensity*255),(eintensity*255),(eintensity*255),255) + RGBA(255,0,0,255) * ((1.-eintensity)*255)
         end if
         
+        fragment_wire = .false.
+
     end function fragment_wire
 
 
