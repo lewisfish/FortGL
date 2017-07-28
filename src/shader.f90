@@ -15,15 +15,14 @@ Module shaderclass
 
 
     abstract interface
-        function generic_vert(this, vertex, i, j, light)
+        function generic_vert(this, vertex, light)
             use triangleclass
             use camera, only : viewport, projection, modelview, v2m, m2v
             import :: shader
             class(shader) :: this
             type(triangle), intent(IN) :: vertex
-            integer,        intent(IN) :: i, j
             type(vector),   intent(IN) :: light
-            real :: generic_vert(4,1)
+            real :: generic_vert(4,3)
 
         end function generic_vert
     end interface
@@ -64,7 +63,8 @@ Module shaderclass
 
     !shader which is a texture mapped shader
     type, extends(shader) :: wireframe
-        real :: line_thickness = 0.025
+        real :: line_thickness = 0.005
+        type(vector) :: altitudes
         Contains
             procedure, pass(this) :: fragment => fragment_wire
             procedure, pass(this) :: vertex => vertex_wire
@@ -92,29 +92,32 @@ Module shaderclass
 
         tmp = vector(this%varying_intensity(1), this%varying_intensity(2), this%varying_intensity(3))
 
-        intensity = tmp .dot. bar_c
+        intensity = abs(tmp .dot. bar_c)
         colour = RGBA(255,255,255,255) * intensity
         fragment_gourand = .false.
         
     end function fragment_gourand
 
 
-    function vertex_gourand(this, vertex, i, j, light)
+    function vertex_gourand(this, vertex, light)
 
         use triangleclass
         use camera, only : viewport, projection, modelview, v2m, m2v
 
         implicit none
 
-        class(gourand)              :: this
+        class(gourand)             :: this
         type(triangle), intent(IN) :: vertex
-        integer,        intent(IN) :: i, j
         type(vector),   intent(IN) :: light
-        real :: gl_vertex(4,1), vertex_gourand(4,1)
+        real :: gl_vertex(4,1), vertex_gourand(4,3)
+        integer :: j
 
-        this%varying_intensity(j) = max(0., (vertex%norms(j) .dot. light))
-        gl_vertex = v2m(vertex%vert(j))
-        vertex_gourand = matmul(matmul(matmul(viewport,projection),modelview),gl_vertex)
+        do j = 1, size(vertex%vert)
+            this%varying_intensity(j) = max(0.01, (vertex%norms(j) .dot. light))
+            gl_vertex = v2m(vertex%vert(j))
+            gl_vertex = matmul(matmul(matmul(viewport,projection),modelview),gl_vertex)
+            vertex_gourand(:, j) = gl_vertex(:,1)
+        end do
     end function vertex_gourand
 
 
@@ -144,7 +147,7 @@ Module shaderclass
     end function fragment_tmap
 
 
-    function vertex_tmap(this, vertex, i, j, light)
+    function vertex_tmap(this, vertex, light)
 
         use triangleclass
         use camera, only : viewport, projection, modelview, v2m, m2v
@@ -153,22 +156,25 @@ Module shaderclass
 
         class(tmap)              :: this
         type(triangle), intent(IN) :: vertex
-        integer,        intent(IN) :: i, j
         type(vector),   intent(IN) :: light
-        real :: gl_vertex(4,1), vertex_tmap(4,1)
+        
+        real    :: gl_vertex(4,1), vertex_tmap(4,3)
+        integer :: j
 
-        this%varying_uv(j) = vertex%uvs(j)
-
-        this%varying_intensity(j) = max(0., (vertex%norms(j) .dot. light))
-        gl_vertex = v2m(vertex%vert(j))
-        vertex_tmap = matmul(matmul(matmul(viewport,projection),modelview),gl_vertex)
+        do j = 1, size(vertex%vert)
+            this%varying_uv(j) = vertex%uvs(j)
+            this%varying_intensity(j) = max(0., (vertex%norms(j) .dot. light))
+            gl_vertex = v2m(vertex%vert(j))
+            gl_vertex = matmul(matmul(matmul(viewport,projection),modelview),gl_vertex)
+            vertex_tmap(:, j) = gl_vertex(:,1)
+        end do
     end function vertex_tmap
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     logical function fragment_wire(this, bar_c, colour)
 
         use image, only : RGBA, operator(*), get_pixel
-        use types, only: operator(.dot.)
+        use types, only: operator(.dot.), operator(*), operator(+)
 
         implicit none
 
@@ -177,39 +183,65 @@ Module shaderclass
         type(RGBA),   intent(INOUT) :: colour
 
         type(vector) :: tmp
-        real :: intensity
+        real :: intensity, d
         intensity = tmp .dot. bar_c
-
-        tmp = vector(this%varying_intensity(1), this%varying_intensity(2), this%varying_intensity(3))
-
-        if(abs(bar_c%x) < this%line_thickness .or. abs(bar_c%y) < this%line_thickness .or. abs(bar_c%z) < this%line_thickness)then
-            colour = RGBA(255,255,255,255)
-        else
-            colour = RGBA(0,0,0,255)
-        end if
-
-        ! colour = colour * intensity
         fragment_wire = .false.
+
+        tmp = bar_c%x * vector(this%altitudes%x,0.,0.) + bar_c%y * vector(0.,this%altitudes%y,0.) + &
+              bar_c%z * vector(0.,0.,this%altitudes%z) 
+
+        d = min(tmp%x,tmp%y,tmp%z)
+        if(d > this%line_thickness)then
+            colour = RGBA(255,0,0,255)
+        else
+            intensity = 2.**(-2.*d*d)
+            colour =  RGBA(25,25,25,255) *(intensity*255) + RGBA(255,0,0,255) * ((1.-intensity)*255)
+        end if
         
     end function fragment_wire
 
 
-    function vertex_wire(this, vertex, i, j, light)
+    function vertex_wire(this, vertex, light)
 
         use triangleclass
         use camera, only : viewport, projection, modelview, v2m, m2v
 
         implicit none
 
-        class(wireframe)              :: this
+        class(wireframe)           :: this
         type(triangle), intent(IN) :: vertex
-        integer,        intent(IN) :: i, j
         type(vector),   intent(IN) :: light
-        real :: gl_vertex(4,1), vertex_wire(4,1)
 
+        real    :: gl_vertex(4,1), vertex_wire(4,3)
+        integer :: j
 
-        this%varying_intensity(j) = max(0., (vertex%norms(j) .dot. light))
-        gl_vertex = v2m(vertex%vert(j))
-        vertex_wire = matmul(matmul(matmul(viewport,projection),modelview),gl_vertex)
+        do j = 1, size(vertex%vert)
+            this%varying_intensity(j) = max(0., (vertex%norms(j) .dot. light))
+            gl_vertex = v2m(vertex%vert(j))
+            gl_vertex = matmul(matmul(matmul(viewport,projection),modelview),gl_vertex)
+            vertex_wire(:,j) = gl_vertex(:,1)
+        end do
+
+        this%altitudes = vector(altitude(vertex%vert(1),vertex%vert(2),vertex%vert(3)), &
+                                altitude(vertex%vert(2),vertex%vert(3),vertex%vert(1)), &
+                                altitude(vertex%vert(3),vertex%vert(1),vertex%vert(2)))
+        ! print*,this%altitudes
+        ! stop
     end function vertex_wire
+
+    real function altitude(a, b, c)
+
+        use types
+
+        implicit none
+
+        type(vector), intent(IN) :: a, b, c
+        type(vector) :: ba, bc, ba_on_bc
+
+        ba = a - b
+        bc = c - b
+        ba_on_bc = (ba .dot. bc) * bc
+        altitude = magnitude(ba - ba_on_bc)
+
+    end function altitude
 end Module shaderclass

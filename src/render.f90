@@ -218,7 +218,7 @@ contains
                 z = pts(3,1)*tmp%x + pts(3,2)*tmp%y + pts(3,3)*tmp%z
                 w = pts(4,1)*tmp%x + pts(4,2)*tmp%y + pts(4,3)*tmp%z
                 frag_depth = max(0, min(255, int(z/w+.5)))
-                if(p%x > img%width-1 .or. p%y > img%height-1 .or. p%x < 0 .or. p%y < 0)cycle
+                if(p%x > img%width-1 .or. p%y > img%height-1 .or. p%x <= 0 .or. p%y <= 0)cycle
                 ! print*,p%x,p%y
                 if(tmp%x <0 .or. tmp%y <0 .or. tmp%z <0 .or. zbuffer(int(p%x + p%y * img%width)) > frag_depth)cycle
                 discard = ishader%fragment(tmp, colour)

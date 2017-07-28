@@ -51,7 +51,7 @@ module userdef
     end function fragment_fn
 
 
-    function vertex_fn(this, vertex, i, j, light)
+    function vertex_fn(this, vertex, light)
 
         use triangleclass
         use camera, only : viewport, projection, modelview, v2m, m2v
@@ -60,14 +60,17 @@ module userdef
 
         class(toon)                :: this
         type(triangle), intent(IN) :: vertex
-        integer,        intent(IN) :: i, j
         type(vector),   intent(IN) :: light
         
-        real :: gl_vertex(4,1), vertex_fn(4,1)
+        real    :: gl_vertex(4,1), vertex_fn(4,3)
+        integer :: j
 
-        this%varying_intensity(j) = max(0., (vertex%norms(j) .dot. light))
-        gl_vertex = v2m(vertex%vert(j))
-        vertex_fn = matmul(matmul(matmul(viewport,projection),modelview),gl_vertex)
+        do j = 1, size(vertex%vert)
+            this%varying_intensity(j) = max(0., (vertex%norms(j) .dot. light))
+            gl_vertex = v2m(vertex%vert(j))
+            gl_vertex = matmul(matmul(matmul(viewport,projection),modelview),gl_vertex)
+            vertex_fn(:,j) = gl_vertex(:,1)
+        end do
     end function vertex_fn
 
 end module userdef
@@ -101,21 +104,20 @@ program openFl
     !array of triangles
     type(models) :: meshes
     type(triangle), allocatable :: tarray(:)
-    type(tmap)                  :: ishader
+    type(wireframe)                  :: ishader
 
     type(RGBAimage)     :: img, zbuf, texture
-    type(RGBA)          :: colour
     type(vector)        :: light_dir, centre, eye
 
     character(len=256)  :: pwd
     character(len=256), allocatable :: arg(:)
 
-    integer             :: i, j, height, width, depth, idx, n, k, p
-    real                :: finish, start, time, screenCoor(4,3), tmp(4,1)
+    integer             :: i, height, width, depth, n, k, p
+    real                :: finish, start, screenCoor(4,3)
     real, allocatable   :: zbuffer(:)
 
     call get_environment_variable('PWD',pwd)
-    pwd = pwd(:len(trim(pwd)))
+    pwd = pwd(:len(trim(pwd))-3)
 
     !get file name
     n = command_argument_count()
@@ -128,7 +130,7 @@ program openFl
         if(index(arg(n), '.ply') > 0)then
             call read_ply(trim(arg(i)), tarray)
         else
-            call read_obj(trim(arg(i)), tarray, texture)
+            call read_obj(trim(arg(i)), tarray, texture, .true.)
         end if
         allocate(meshes%container(i)%tarray(size(tarray)))
         meshes%container(i)%tarray(:) = tarray(:)
@@ -149,13 +151,12 @@ program openFl
 
     allocate(zbuffer(width*height))
 
-
-    do p = 1, 10
+    do p = 1, 1
        call fill_img(img, RGBA(0,0,0,255))
 
-        light_dir = normal(vector(1.,1.,1.))
-        centre = vector(0., 0., 0.)
-        eye = vector(1., 1., real(p))
+        light_dir = normal(vector(-.75,1.,.25))
+        centre = vector(0., -0.1, -0.1)
+        eye = vector(-3., 1.25, -2.)
         screenCoor = 0.
 
         modelview = lookat(eye, centre, vector(0.,1.,0.))
@@ -163,34 +164,28 @@ program openFl
         viewport = view_init(width/8, height/8, width*3/4, height*3/4, depth)
 
         zbuffer = -huge(1.)
-        time = 0.
+        call cpu_time(start)
 
         ! do render
         do k = 1, size(meshes%container)
-            call cpu_time(start)
-            ishader%texture = meshes%container(k)%texture
+            ! ishader%texture = meshes%container(k)%texture
             do i = 1, size(meshes%container(k)%tarray)
-                do j = 1, 3
-                   tmp = ishader%vertex(meshes%container(k)%tarray(i), i, j, light_dir)
-                   screenCoor(:,j) = tmp(:,1)
-                end do
+                screenCoor = ishader%vertex(meshes%container(k)%tarray(i), light_dir)
                 call draw_triangle(img, ishader, zbuffer, screenCoor)
             end do
-            call cpu_time(finish)
-            time = time + (finish-start)
-            ! deallocate(meshes%container(k)%tarray)
         end do
-
-        print*,' '
-        print*,"Render took: ",str(time,5),'s'
-        print*,''
+        call cpu_time(finish)
 
         !flip image
         call flip(img)
         !save image
-        call save_image(img, trim(pwd)//"/data/output"//str(p), '.png')
+        call save_image(img, trim(pwd)//"data/output"//str(p), '.png')
 
         !asynchronously display image if supported, if not do it synchronously 
-        ! call execute_command_line("eog "//trim(pwd)//"data/output"//str(p)//".png",wait=.false.)
+        call execute_command_line("eog "//trim(pwd)//"data/output"//str(p)//".png",wait=.false.)
     end do
+
+    print*,' '
+    print*,"Render took: ",str(finish-start,5),'s'
+    print*,''
 end program openFl
