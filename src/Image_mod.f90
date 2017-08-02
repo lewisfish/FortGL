@@ -104,7 +104,7 @@ Module Image
    public :: operator(+), assignment(=), operator(*), operator(.dist.), operator(==), operator(/=)
    public :: save_image, open_image, write_ppm, read_ppm, flip, clampInt
    public :: alloc_image, init_image, get_pixel, set_pixel, fill_img
-   public :: rgb, rgba, RGBimage, RGBAimage
+   public :: rgb, rgba, RGBimage, RGBAimage, alpha_comp
 
 Contains
 
@@ -388,6 +388,7 @@ Contains
                                
    end function colourdistance
 
+
    function colouraddA(c1, c2)
 
       type(RGBA), intent(IN) :: c1, c2
@@ -397,6 +398,7 @@ Contains
 
    end function colouraddA
 
+
    function colouradd(c1, c2)
 
       type(RGB), intent(IN) :: c1, c2
@@ -405,6 +407,7 @@ Contains
       colouradd = RGB(c1%red + c2%red, c1%green + c2%green, c1%blue + c2%blue)
 
    end function colouradd
+
 
    function colourmultiplyA(colour, scalar)
 
@@ -436,6 +439,25 @@ Contains
 
    end function colourmultiplycolour
    
+
+   function alpha_comp(ca, cb) result(co)
+
+      implicit none
+
+      type(RGBA), intent(IN) :: cb, ca
+      type(RGBA)             :: co
+      real                   :: a_tmp, b_tmp
+
+      a_tmp = ca%alpha/255.
+      b_tmp = cb%alpha/255.
+
+      co%red =  clampInt(int(ca%red * a_tmp) + int(cb%red * (1. - a_tmp)), 0, 255)
+      co%green =  clampInt(int(ca%green * a_tmp) + int(cb%green * (1. - a_tmp)), 0, 255)
+      co%blue =  clampInt(int(ca%blue * a_tmp) + int(cb%blue * (1. - a_tmp)), 0, 255)
+      co%alpha = clampInt(int((b_tmp + (1. - b_tmp) * a_tmp)*255.), 0, 255)
+
+   end function alpha_comp
+
 
    subroutine read_ppm_RGB(filename, img)
    
@@ -493,64 +515,78 @@ Contains
    
    end subroutine read_ppm_RGB
 
+
    subroutine read_ppm_RGBA(filename, img)
    
       implicit none
       
       type(RGBAImage),     intent(OUT) :: img
-      integer                          :: nmax, i, j, offset, io
+      integer                          :: nmax, i, j, offset, io, u
       character(len = *), intent(IN)   :: filename
-      character(2)                     :: mode
-      character                        :: code
+      character(len=2)                     :: mode
+      character(len=1)                        :: code
+      character(len=128) :: line
       
 !horrible code fix!!!!!!!!!!!!!!!
 
-      img%width = 0
-      img%height = 0
-      nullify(img%Red)
-      nullify(img%Green)
-      nullify(img%Blue)
-      nullify(img%Alpha)
+      call init_image(img)
       
-      open(56, file = filename, access='stream',form='formatted',status= 'old', iostat=io)
+      open(newunit=u, file = filename, access='stream',form='formatted',status= 'old', iostat=io)
       if(io /= 0)then
-         print*,'Cant open'//trim(filename)
+         print*,'Cant open '//trim(filename)
       else
-         read(56, '(A2)') mode
-         read(56, *) img%width, img%height
-         read(56, *) nmax
-         inquire(56,pos=offset)
-         close(56)
-         open(56 ,file=filename,access='stream',status='old')
-         read(56, pos=offset-1) code
-         call alloc_image(img, img%width, img%height)
-
+         read(u, '(A2)') mode
+         if(mode == 'P6')then
+            read(u, *) img%width, img%height
+            read(u, *) nmax
+            inquire(u,pos=offset)
+            close(u)
+            open(newunit=u ,file=filename,access='stream',status='old')
+            read(u, pos=offset-1) code
+            call alloc_image(img, img%width, img%height)
+         elseif(mode == 'P7')then
+            read(u,*)line,img%width
+            read(u,*)line,img%height
+            read(u,*)line!depth
+            read(u,*)line!maxval
+            read(u,*)line!tuple
+            read(u,*)line!endhdr
+            inquire(u,pos=offset)
+            close(u)
+            open(newunit=u ,file=filename,access='stream',status='old')
+            read(u,pos=offset-1)code
+            call alloc_image(img, img%width, img%height)
+         end if
          if(mode == 'P6')then
             do j = 1, img%height
                do i = 1, img%width
-                  read(56) code
+                  read(u) code
                   img%Red(i,j) = iachar(code)
-                  read(56) code
+                  read(u) code
                   img%Green(i,j) = iachar(code)
-                  read(56) code
+                  read(u) code
                   img%Blue(i,j) = iachar(code)
+               end do
+            end do
+         elseif(mode == 'P7')then
+            do j = 1, img%height
+               do i = 1, img%width
+                  read(u) code
+                  img%Red(i,j) = iachar(code)
+                  read(u) code
+                  img%Green(i,j) = iachar(code)
+                  read(u) code
+                  img%Blue(i,j) = iachar(code)
+                  read(u) code
+                  img%alpha(i,j) = iachar(code)
                end do
             end do
          else
             print*,'Mode not supported!'
             stop
-   !         do j = 1, img%height
-   !            do i = 1, img%width
-   !               read(56) img%red(i,j)
-   !               read(56),img%green(i,j)
-   !               read(56),img%blue(i,j)
-   !               print*,img%red(i,j),img%green(i,j),img%blue(i,j)
-   !               call exit(0)
-   !            end do
-   !         end do
          end if
       end if
-      close(56)
+      close(u)
    
    end subroutine read_ppm_RGBA
    
@@ -634,16 +670,20 @@ Contains
 
    subroutine write_ppm_RGBA(filename, img, mode)
    
+      use iso_fortran_env, only : int8
+      use utils,           only : str
+
       implicit none
       
       type(RGBAImage),             intent(in) :: img
       character(len=*),           intent(in)  :: filename
       character(len=*), optional, intent(in)  :: mode
-      integer                                 :: i, j
+      integer                                 :: i, j, u
       logical                                 :: flag
+      integer(kind=int8) :: r,g,b,a
       
       if(present(mode))then
-         if(mode == 'P6')then
+         if(mode == 'P7' .or. mode == 'P6')then
             flag = .TRUE.
          else
             flag = .FALSE.
@@ -652,32 +692,45 @@ Contains
          flag = .FALSE.
       end if
       
-      open(45, file = filename)
-      
-      if(flag)then
-         write(45, '(A2)') 'P6'
-      else
-         write(45, '(A2)') mode
-         print*,mode
-      end if
-      
-      write(45, '(i0, " ",i0)') img%width, img%height
-      write(45, '(i0)') 255
+      open(newunit=u, file=filename, status='replace')
 
       if(flag)then
+         write(u, '(A2)') mode
+         if(mode == 'P7')then
+            write(u,*)'WIDTH '//str(img%width)
+            write(u,*)'HEIGHT '//str(img%height)
+            write(u,*)'DEPTH 4'
+            write(u,*)'MAXVAL '//str(max(maxval(img%red),maxval(img%green),maxval(img%blue)))
+            write(u,*)'TUPLTYPE RGB_ALPHA'
+            write(u,*)'ENDHDR'
+         else
+            write(u, '(i0, " ",i0)') img%width, img%height
+            write(u, '(i0)') 255
+         end if
+      else
+         write(u, '(A2)') mode
+      end if
+      
+      close(u)
+
+      if(flag)then
+         open(newunit=u, file = filename, access='stream', form='unformatted', position='append')
          do j = 1, img%height
             do i = 1, img%width
-               write(45, '(3A1)', advance='no') achar(img%Red(i,j)), achar(img%Green(i,j)), achar(img%Blue(i,j))
+               r = img%Red(i,j); g = img%Green(i,j); b = img%Blue(i,j); a=img%alpha(i,j)
+               if(mode == 'P7')write(u)r,g,b,a
+               if(mode == 'P6')write(u)r,g,b
             end do
          end do
       else
+         open(newunit=u, file = filename, position='append')
          do j = 1, img%height
             do i = 1, img%width
-               write(45, '(3(I3.1,1X))',advance='no') img%Red(i,j), img%Green(i,j), img%Blue(i,j)
+               write(u, '(3(I3.1,1X))',advance='no') img%Red(i,j), img%Green(i,j), img%Blue(i,j)
             end do
          end do
       end if
-      close(45)
+      close(u)
       
    end subroutine write_ppm_RGBA
 

@@ -130,7 +130,7 @@ program openFl
         if(index(arg(n), '.ply') > 0)then
             call read_ply(trim(arg(i)), tarray)
         else
-            call read_obj(trim(arg(i)), tarray, texture, .true.)
+            call read_obj(trim(arg(i)), tarray, texture, .false.)
         end if
         allocate(meshes%container(i)%tarray(size(tarray)))
         meshes%container(i)%tarray(:) = tarray(:)
@@ -138,9 +138,12 @@ program openFl
     end do
 
     !set image size
-    width  = 800
-    height = 800
+    width  = 1600
+    height = 1600
     depth  = 255
+
+    ishader%width = width
+    ishader%height = height
 
     !setup imgage object
     call init_image(img)
@@ -154,9 +157,9 @@ program openFl
     do p = 1, 1
        call fill_img(img, RGBA(0,0,0,255))
 
-        light_dir = normal(vector(-.75,1.,.25))
-        centre = vector(0., -0.1, -0.1)
-        eye = vector(-3., 1.25, -2.)
+        light_dir = normal(vector(1.,1.,1.))
+        centre = vector(0., 0., 0.)
+        eye = vector(0., -1., 5.)
         screenCoor = 0.
 
         modelview = lookat(eye, centre, vector(0.,1.,0.))

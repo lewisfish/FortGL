@@ -65,6 +65,7 @@ Module shaderclass
     type, extends(shader) :: wireframe
         real :: line_thickness = 0.0025
         type(vector) :: altitudes
+        integer :: width, height
         Contains
             procedure, pass(this) :: fragment => fragment_wire
             procedure, pass(this) :: vertex => vertex_wire
@@ -173,7 +174,7 @@ Module shaderclass
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     logical function fragment_wire(this, bar_c, colour)
 
-        use image, only : RGBA, operator(*), get_pixel
+        use image, only : RGBA, operator(*), get_pixel, alpha_comp
         use types, only: operator(.dot.), operator(*), operator(+)
 
         implicit none
@@ -189,14 +190,14 @@ Module shaderclass
               bar_c%z * vector(0.,0.,this%altitudes%z) 
 
         d = min(tmp%x,tmp%y,tmp%z)
-        if(d > this%line_thickness)then
-            tmp = vector(this%varying_intensity(1), this%varying_intensity(2), this%varying_intensity(3))
-            intensity = abs(tmp .dot. bar_c)
-            colour = RGBA(255,0,0,255) * intensity
-        else
-            eintensity = 2.**(-2.*d*d)
-            colour =  RGBA((eintensity*255),(eintensity*255),(eintensity*255),255) + RGBA(255,0,0,255) * ((1.-eintensity)*255)
-        end if
+        ! if(d > 2.)then
+        !     tmp = vector(this%varying_intensity(1), this%varying_intensity(2), this%varying_intensity(3))
+        !     intensity = abs(tmp .dot. bar_c)
+        !     colour = RGBA(255,0,0,255) * intensity
+        ! else
+            eintensity = 2.**(-.1*d*d)
+            colour =  RGBA(255,255,255,255) * eintensity + RGBA(255,0,0,255) * (1. - eintensity)
+        ! end if
         
         fragment_wire = .false.
 
@@ -214,7 +215,9 @@ Module shaderclass
         type(triangle), intent(IN) :: vertex
         type(vector),   intent(IN) :: light
 
-        real    :: gl_vertex(4,1), vertex_wire(4,3)
+        type(vector) :: p0,p1,p2,v0,v1,v2
+
+        real    :: gl_vertex(4,1), vertex_wire(4,3), area
         integer :: j
 
         do j = 1, size(vertex%vert)
@@ -224,9 +227,31 @@ Module shaderclass
             vertex_wire(:,j) = gl_vertex(:,1)
         end do
 
-        this%altitudes = vector(altitude(vertex%vert(1),vertex%vert(2),vertex%vert(3)), &
-                                altitude(vertex%vert(2),vertex%vert(3),vertex%vert(1)), &
-                                altitude(vertex%vert(3),vertex%vert(1),vertex%vert(2)))
+        p0%z = 0.
+        p1%z = 0.
+        p2%z = 0.
+
+        p0%x = this%width *  vertex%vert(1)%x/vertex_wire(4,1)
+        p0%y = this%height * vertex%vert(1)%y/vertex_wire(4,1)
+
+        p1%x = this%width *  vertex%vert(2)%x/vertex_wire(4,2)
+        p1%y = this%height * vertex%vert(2)%y/vertex_wire(4,2)
+
+        p2%x = this%width *  vertex%vert(3)%x/vertex_wire(4,3)
+        p2%y = this%height * vertex%vert(3)%y/vertex_wire(4,3)
+
+
+        v0 = p2 - p1
+        v1 = p2 - p0
+        v2 = p1 - p0
+
+        area = abs(v1%x*v2%y - v1%y*v2%x)
+
+        this%altitudes = vector(area/magnitude(v0), area/magnitude(v1), area/magnitude(v2))
+
+        ! this%altitudes = vector(altitude(vertex%vert(1),vertex%vert(2),vertex%vert(3)), &
+        !                         altitude(vertex%vert(2),vertex%vert(3),vertex%vert(1)), &
+        !                         altitude(vertex%vert(3),vertex%vert(1),vertex%vert(2)))
         ! print*,this%altitudes
         ! stop
     end function vertex_wire
